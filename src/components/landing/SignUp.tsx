@@ -1,16 +1,12 @@
 
 import * as React from "react";
-import img1 from '../../assets/icons/img_13.png'
-import img2 from '../../assets/icons/img_8.png'
-import img3 from '../../assets/icons/img_9.png'
-import img4 from '../../assets/icons/img_10.png'
 import img from "../../assets/icons/img_14.png";
 
 
 
 const SignUp: React.FC = () => {
     return (
-        <img src={img} className="w-full h-full"/>
+        <img src={img} className="w-full h-full" alt="img"/>
 
         // <div className="container mx-auto px-6 lg:p-[190px]  lg:pt-[20px] py-16">
         //     <div className="grid grid-cols-1 lg:grid-cols-2 gap-8">

@@ -7,6 +7,7 @@ import Devices from "../components/landing/Devices.tsx";
 import CTA from "../components/landing/CTA.tsx";
 import Different from "../components/landing/Different.tsx";
 import Footer from "../components/landing/Footer.tsx";
+import About from "../components/landing/About.tsx";
 
 const Website: React.FC = () => {
     return (
@@ -26,6 +27,7 @@ const Website: React.FC = () => {
                     <Devices />
                     <CTA />
                     <Different />
+                    <About />
                 </main>
                 <Footer />
             </div>

@@ -1,5 +1,6 @@
 import React, { useState, useEffect } from 'react';
 import logo from '../../assets/icons/logo.png'
+import {WalletConnection} from "../landing/WalletConnection.tsx";
 
 const Header: React.FC = () => {
     const [isOpen, setIsOpen] = useState(false);
@@ -18,7 +19,7 @@ const Header: React.FC = () => {
         <header className={`sticky top-0 z-50 bg-white/80 backdrop-blur-lg shadow-sm transition-all duration-300 ${isScrolled ? 'bg-white/80 backdrop-blur-lg shadow-sm' : 'bg-transparent'}`}>
             <div className="container mx-auto px-6 py-4">
                 <div className="flex items-center justify-between">
-                    <img src={logo} className="h-9 w-auto"/>
+                    <img src={logo} className="h-9 w-auto" alt="img"/>
 
                     <nav className="hidden relative left-[50px] lg:flex items-center space-x-8">
                         <a href="#" className="text-milo-dark-purple font-medium hover:text-milo-purple transition-colors">Docs</a>
@@ -27,9 +28,7 @@ const Header: React.FC = () => {
                     </nav>
 
                     <div className="hidden lg:block">
-                        <button className="bg-milo-purple text-white font-bold py-2 px-6 rounded-lg hover:opacity-90 transition-opacity">
-                            Connect Wallet
-                        </button>
+                        <WalletConnection />
                     </div>
 
                     <div className="lg:hidden">
