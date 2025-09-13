@@ -1,0 +1,97 @@
+import { TransactionBlock } from "@mysten/sui.js/transactions";
+
+export const SUPPORTED_ASSETS = ["SUI", "CETUS", "USDC", "BTC", "ETH"] as const;
+export type Asset = typeof SUPPORTED_ASSETS[number];
+
+export interface Intent {
+  action: "transfer" | "mint" | "stake" | "swap";
+  asset?: Asset;
+  amount?: number;
+  recipient?: string; // or validator / target
+  metadata?: string; // for NFT mint
+  target?: string;   // for swap target
+}
+
+export async function buildTransaction(intent: Intent): Promise<TransactionBlock> {
+  const txb = new TransactionBlock();
+
+  switch (intent.action) {
+    case "transfer":
+      buildTransferTx(txb, intent);
+      break;
+
+    case "mint":
+      buildMintTx(txb, intent);
+      break;
+
+    case "stake":
+      buildStakeTx(txb, intent);
+      break;
+
+    case "swap":
+      buildSwapTx(txb, intent);
+      break;
+
+    default:
+      throw new Error(`Unknown action: ${intent.action}`);
+  }
+
+  return txb;
+}
+
+/** --- ACTION HANDLERS --- **/
+
+// 🔹 Transfer SUI
+function buildTransferTx(
+  txb: TransactionBlock,
+  { amount = 0, recipient }: Intent
+) {
+  if (!recipient) throw new Error("Recipient is required for transfer");
+  const mistAmount = BigInt(amount * 1e9);
+  const [coin] = txb.splitCoins(txb.gas, [txb.pure(mistAmount)]);
+  txb.transferObjects([coin], txb.pure(recipient));
+}
+
+// 🔹 Mint NFT (stub – replace with your package/module)
+function buildMintTx(
+  txb: TransactionBlock,
+  { metadata = "My NFT" }: Intent
+) {
+  txb.moveCall({
+    target: "0xNFT_PACKAGE_ID::nft_module::mint",
+    arguments: [
+      txb.pure(metadata),
+      txb.pure("https://example.com/nft.png"),
+    ],
+  });
+}
+
+// 🔹 Stake SUI (stub – requires validator address)
+function buildStakeTx(
+  txb: TransactionBlock,
+  { amount = 0, recipient: validator }: Intent
+) {
+  if (!validator) throw new Error("Validator address required for stake");
+  const mistAmount = BigInt(amount * 1e9);
+  const [stakeCoin] = txb.splitCoins(txb.gas, [txb.pure(mistAmount)]);
+  txb.moveCall({
+    target: "0x2::sui_system::request_add_stake",
+    arguments: [txb.object("0x5"), stakeCoin, txb.pure(validator)],
+  });
+}
+
+// 🔹 Swap (stub – depends on DEX package on Sui)
+function buildSwapTx(
+  txb: TransactionBlock,
+  { amount = 0, asset, target }: Intent
+) {
+  if (!asset || !target) throw new Error("Swap requires asset + target");
+  txb.moveCall({
+    target: "0xDEX_PACKAGE::swap_module::swap_exact_input",
+    arguments: [
+      txb.pure(asset),
+      txb.pure(target),
+      txb.pure(amount * 1e9),
+    ],
+  });
+}
