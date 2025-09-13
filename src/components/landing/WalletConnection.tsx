@@ -1,6 +1,6 @@
 import { ConnectButton, useCurrentAccount } from "@mysten/dapp-kit";
 import { useState } from "react";
-import { Wallet, ChevronDown, Copy, ExternalLink} from "lucide-react";
+import { Wallet, ChevronDown, Copy, ExternalLink } from "lucide-react";
 
 export const WalletConnection = () => {
     const currentAccount = useCurrentAccount();
@@ -29,10 +29,6 @@ export const WalletConnection = () => {
                     <div className="absolute inset-0 bg-gradient-to-r from-purple-600 via-blue-600 to-cyan-600 rounded-2xl opacity-0 group-hover:opacity-20 transition-opacity duration-300" />
 
                     <div className="relative flex items-center gap-3">
-                        {/*<div className="w-10 h-10 bg-gradient-to-br from-emerald-400 to-cyan-400 rounded-xl flex items-center justify-center shadow-lg">*/}
-                        {/*    <Wallet className="w-5 h-5 text-white" />*/}
-                        {/*</div>*/}
-
                         <div className="flex flex-col items-start">
                             <span className="text-sm font-medium text-white/90">Connected</span>
                             <span className="text-xs text-white/70 font-mono">
@@ -81,9 +77,7 @@ export const WalletConnection = () => {
                             </div>
 
                             <ConnectButton
-                                connectText="Connect Wallet"
-                                disconnectText="Disconnect"
-                                connectedText="Connected"
+                                connectText="Disconnect"
                                 className="w-full flex items-center justify-center gap-2 px-4 py-2 bg-red-500/20 hover:bg-red-500/30 border border-red-500/30 rounded-xl transition-all duration-200 text-red-200 hover:text-red-100"
                             />
                         </div>
@@ -103,8 +97,6 @@ export const WalletConnection = () => {
     return (
         <ConnectButton
             connectText="Connect Wallet"
-            disconnectText="Disconnect"
-            connectedText="Connected"
             style={{
                 background: "#6C55F5",
                 color: "white",
