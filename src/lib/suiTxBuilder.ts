@@ -8,6 +8,7 @@ export interface Intent {
   asset?: Asset;
   amount?: number;
   recipient?: string; // or validator / target
+  gasBudget?: number,
   metadata?: string; // for NFT mint
   target?: string;   // for swap target
 }
