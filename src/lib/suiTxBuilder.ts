@@ -1,10 +1,10 @@
 import { TransactionBlock } from "@mysten/sui.js/transactions";
-
+import {useCurrentAccount, useSuiClient} from "@mysten/dapp-kit";
 export const SUPPORTED_ASSETS = ["SUI", "CETUS", "USDC", "BTC", "ETH"] as const;
 export type Asset = typeof SUPPORTED_ASSETS[number];
 
 export interface Intent {
-  action: "transfer" | "mint" | "stake" | "swap";
+  action: "transfer" | "mint" | "stake" | "swap" | "query-balance";
   asset?: Asset;
   amount?: number;
   recipient?: string; // or validator / target
@@ -16,7 +16,15 @@ export interface Intent {
 export async function buildTransaction(intent: Intent): Promise<TransactionBlock> {
   const txb = new TransactionBlock();
 
+  if (intent.gasBudget) {
+    txb.setGasBudget(intent.gasBudget);
+  }
+
   switch (intent.action) {
+    case "query-balance":
+      getBalance();
+      break;
+
     case "transfer":
       buildTransferTx(txb, intent);
       break;
@@ -42,15 +50,28 @@ export async function buildTransaction(intent: Intent): Promise<TransactionBlock
 
 /** --- ACTION HANDLERS --- **/
 
+// query-balance is handled outside (no tx needed)
+const getBalance = () => {
+    const currentAccount = useCurrentAccount();
+    const suiClient = useSuiClient();
+    if (!currentAccount || !suiClient) {
+        throw new Error("No current account or Sui client");
+    }
+    return suiClient.getBalance({ owner: currentAccount.address, coinType: "0x2::sui::SUI" });
+}
+
 // 🔹 Transfer SUI
 function buildTransferTx(
   txb: TransactionBlock,
   { amount = 0, recipient }: Intent
 ) {
   if (!recipient) throw new Error("Recipient is required for transfer");
+  if (amount <= 0) throw new Error("Transfer amount must be greater than 0");
   const mistAmount = BigInt(amount * 1e9);
-  const [coin] = txb.splitCoins(txb.gas, [txb.pure(mistAmount)]);
-  txb.transferObjects([coin], txb.pure(recipient));
+
+  const [coinToSend] = txb.splitCoins(txb.gas, [txb.pure(mistAmount)]);
+
+  txb.transferObjects([coinToSend], txb.pure(recipient));
 }
 
 // 🔹 Mint NFT (stub – replace with your package/module)
