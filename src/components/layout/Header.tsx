@@ -46,9 +46,7 @@ const Header: React.FC = () => {
                             <a href="#" className="text-milo-dark-purple font-medium hover:text-milo-purple transition-colors">Ideas</a>
                             <a href="#" className="text-milo-dark-purple font-medium hover:text-milo-purple transition-colors">Features</a>
                             <a href="#" className="text-milo-dark-purple font-medium hover:text-milo-purple transition-colors">About</a>
-                            <button className="bg-milo-purple text-white font-bold py-3 px-6 rounded-lg hover:opacity-90 transition-opacity w-full">
-                                Connect Wallet
-                            </button>
+                            <WalletConnection />
                         </nav>
                     </div>
                 )}

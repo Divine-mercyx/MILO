@@ -1,5 +1,4 @@
 import { TransactionBlock } from "@mysten/sui.js/transactions";
-import {useCurrentAccount, useSuiClient} from "@mysten/dapp-kit";
 export const SUPPORTED_ASSETS = ["SUI", "CETUS", "USDC", "BTC", "ETH"] as const;
 export type Asset = typeof SUPPORTED_ASSETS[number];
 
@@ -21,9 +20,6 @@ export async function buildTransaction(intent: Intent): Promise<TransactionBlock
   }
 
   switch (intent.action) {
-    case "query-balance":
-      getBalance();
-      break;
 
     case "transfer":
       buildTransferTx(txb, intent);
@@ -50,15 +46,6 @@ export async function buildTransaction(intent: Intent): Promise<TransactionBlock
 
 /** --- ACTION HANDLERS --- **/
 
-// query-balance is handled outside (no tx needed)
-const getBalance = () => {
-    const currentAccount = useCurrentAccount();
-    const suiClient = useSuiClient();
-    if (!currentAccount || !suiClient) {
-        throw new Error("No current account or Sui client");
-    }
-    return suiClient.getBalance({ owner: currentAccount.address, coinType: "0x2::sui::SUI" });
-}
 
 // 🔹 Transfer SUI
 function buildTransferTx(
