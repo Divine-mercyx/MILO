@@ -1,8 +1,11 @@
 import React, { useState, useEffect } from 'react';
 import logo from '../../assets/icons/logo.png'
 import {WalletConnection} from "../landing/WalletConnection.tsx";
+// import { useCurrentAccount } from "@mysten/dapp-kit";
+
 
 const Header: React.FC = () => {
+    // const currentAccount = useCurrentAccount();
     const [isOpen, setIsOpen] = useState(false);
     const [isScrolled, setIsScrolled] = useState(false);
 
@@ -13,6 +16,7 @@ const Header: React.FC = () => {
         window.addEventListener('scroll', handleScroll);
         return () => window.removeEventListener('scroll', handleScroll);
     }, []);
+
 
 
     return (

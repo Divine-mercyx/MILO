@@ -24,14 +24,13 @@ export const WalletConnection = () => {
             <div className="relative">
                 <button
                     onClick={() => setIsDropdownOpen(!isDropdownOpen)}
-                    className="group relative flex items-center gap-3 px-6 py-3 bg-[#6C55F5] backdrop-blur-xl border border-white/20 rounded-2xl shadow-2xl hover:shadow-purple-500/25 transition-all duration-300 hover:scale-105 hover:border-white/30"
+                    className="group relative flex items-center gap-3 px-8 py-3 bg-[#6C55F5] backdrop-blur-xl border border-white/20 rounded-lg shadow-2xl hover:shadow-purple-500/25 transition-all duration-300 hover:scale-105 hover:border-white/30"
                 >
                     <div className="absolute inset-0 bg-gradient-to-r from-purple-600 via-blue-600 to-cyan-600 rounded-2xl opacity-0 group-hover:opacity-20 transition-opacity duration-300" />
 
                     <div className="relative flex items-center gap-3">
                         <div className="flex flex-col items-start">
-                            <span className="text-sm font-medium text-white/90">Connected</span>
-                            <span className="text-xs text-white/70 font-mono">
+                            <span style={{ fontFamily: "poppins" }} className="text-xs text-white/70 font-bold font-mono">
                                 {formatAddress(currentAccount.address)}
                             </span>
                         </div>
@@ -45,7 +44,7 @@ export const WalletConnection = () => {
                 </button>
 
                 {isDropdownOpen && (
-                    <div className="absolute top-full mt-2 right-0 w-80 bg-white backdrop-blur-2xl border border-white/20 rounded-2xl shadow-2xl p-4 z-50 animate-in slide-in-from-top-2 duration-200">
+                    <div className="absolute top-full mt-2 right-0 w-80 bg-[#6C55F5] backdrop-blur-2xl border border-white/20 rounded-2xl shadow-2xl p-4 z-50 animate-in slide-in-from-top-2 duration-200">
                         <div className="space-y-3">
                             <div className="flex items-center gap-3 p-3 bg-white/5 rounded-xl border border-white/10">
                                 <div className="w-12 h-12 bg-gradient-to-br from-emerald-400 to-cyan-400 rounded-xl flex items-center justify-center shadow-lg">
