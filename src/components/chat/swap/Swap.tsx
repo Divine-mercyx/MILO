@@ -1,4 +1,4 @@
-import React, { useState } from "react";
+import React, {useEffect, useState} from "react";
 import BankAccountExample from "./BankAccountExample.tsx";
 import {Detail, SwapIcon2} from "../../../assets/icons/icons.tsx";
 
@@ -10,8 +10,10 @@ const Swap: React.FC = () => {
     const [showSendDropdown, setShowSendDropdown] = useState(false);
     const [showReceiveDropdown, setShowReceiveDropdown] = useState(false);
 
+    useEffect(() => {
+        setPrice(0.00);
+    }, []);
 
-    setPrice(0.00);
     // Available assets for dropdown
     const sendAssets = ["USDC", "USDT", "SUI"];
     const receiveAssets = ["NGN", "USD", "EUR"];
