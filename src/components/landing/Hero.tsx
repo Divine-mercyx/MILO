@@ -7,28 +7,28 @@ const Hero: React.FC = () => {
         <section className="relative container mx-auto px-6 py-24 sm:py-32 lg:py-40 text-center">
             {/* Top-left corner */}
             <AnimatedWrapper className="absolute top-10 left-[150px] opacity-50 hidden md:block">
-                <CornerArc className="w-14 h-14" />
+                <CornerArc className="w-13 h-13" />
             </AnimatedWrapper>
 
             {/* Top-right corner */}
             <AnimatedWrapper className="absolute top-10 right-[150px] opacity-50 hidden md:block" delay={100}>
-                <CornerArc className="w-14 h-14 rotate-90" />
+                <CornerArc className="w-13 h-13 rotate-90" />
             </AnimatedWrapper>
 
             {/* Bottom-left corner */}
             <AnimatedWrapper className="absolute bottom-10 left-[150px] opacity-50 hidden md:block" delay={200}>
-                <CornerArc className="w-14 h-14 -rotate-90" />
+                <CornerArc className="w-13 h-13 -rotate-90" />
             </AnimatedWrapper>
 
             {/* Bottom-right corner */}
             <AnimatedWrapper className="absolute bottom-10 right-[150px] opacity-50 hidden md:block" delay={300}>
-                <CornerArc className="w-14 h-14 rotate-180" />
+                <CornerArc className="w-13 h-13 rotate-180" />
             </AnimatedWrapper>
 
             <div className="relative z-10">
                 <AnimatedWrapper>
-                    <div style={{ borderRadius: "53.22px", display: "flex", justifyContent: "center", placeItems: "center" }} className="bg-[#F2F2F2] mx-auto w-[190.596923828125px] h-[31.236923217773438px]">
-                        <p className="text-milo-purpl text-[#000000] text-[11.57px] font-semibold tracking-wider mb-4">MOBILE APP COMING SOON</p>
+                    <div style={{ borderRadius: "53.22px", display: "flex", justifyContent: "center", alignItems: "center" }} className="bg-[#F2F2F2] mx-auto w-[190.596923828125px] h-[31.236923217773438px]">
+                        <p className="text-milo-purpl text-[#000000] text-[11.57px] font-semibold tracking-wider">MOBILE APP COMING SOON</p>
                     </div>
                 </AnimatedWrapper>
                 <AnimatedWrapper delay={100}>

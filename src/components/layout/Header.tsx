@@ -1,8 +1,11 @@
 import React, { useState, useEffect } from 'react';
 import logo from '../../assets/icons/logo.png'
 import {WalletConnection} from "../landing/WalletConnection.tsx";
+// import { useCurrentAccount } from "@mysten/dapp-kit";
+
 
 const Header: React.FC = () => {
+    // const currentAccount = useCurrentAccount();
     const [isOpen, setIsOpen] = useState(false);
     const [isScrolled, setIsScrolled] = useState(false);
 
@@ -13,6 +16,7 @@ const Header: React.FC = () => {
         window.addEventListener('scroll', handleScroll);
         return () => window.removeEventListener('scroll', handleScroll);
     }, []);
+
 
 
     return (
@@ -46,9 +50,7 @@ const Header: React.FC = () => {
                             <a href="#" className="text-milo-dark-purple font-medium hover:text-milo-purple transition-colors">Ideas</a>
                             <a href="#" className="text-milo-dark-purple font-medium hover:text-milo-purple transition-colors">Features</a>
                             <a href="#" className="text-milo-dark-purple font-medium hover:text-milo-purple transition-colors">About</a>
-                            <button className="bg-milo-purple text-white font-bold py-3 px-6 rounded-lg hover:opacity-90 transition-opacity w-full">
-                                Connect Wallet
-                            </button>
+                            <WalletConnection />
                         </nav>
                     </div>
                 )}
