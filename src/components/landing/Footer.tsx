@@ -19,7 +19,7 @@ const Footer: React.FC = () => {
                         <div className="flex space-x-4 mt-6">
                             <a href="#" className="w-10 h-10 flex items-center justify-center bg-white text-indigo-600 rounded-full hover:bg-indigo-100 transition-colors"><TwitterIcon className="w-5 h-5"/></a>
                             <a href="#" className="w-10 h-10 flex items-center justify-center bg-white text-indigo-600 rounded-full hover:bg-indigo-100 transition-colors"><OoiIcon className="w-6 h-6"/></a>
-                            <a href="#" className="w-10 h-10 flex items-center justify-center bg-white text-indigo-600 rounded-full hover:bg-indigo-100 transition-colors"><TelegramIcon className="w-6 h-6 stroke-current" strokeWidth="1.5"/></a>
+                            <a href="#" className="w-10 h-10 flex items-center justify-center bg-white text-indigo-600 rounded-full hover:bg-indigo-100 transition-colors"><TelegramIcon className="w-6 h-6 stroke-current"/></a>
                         </div>
                     </div>
 

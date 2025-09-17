@@ -1,4 +1,4 @@
-import React, { useState } from 'react';
+import { useState } from 'react';
 import SpeechRecognition, { useSpeechRecognition } from 'react-speech-recognition';
 
 const SimpleSpeechToText = () => {
@@ -31,8 +31,8 @@ const SimpleSpeechToText = () => {
     };
 
     // Function to correct common misrecognitions
-    const correctTranscript = (text) => {
-        const corrections = {
+    const correctTranscript = (text: string) => {
+        const corrections: any = {
             'sweet': 'SUI',
             'sw eat': 'SUI',
             's we eat': 'SUI',
