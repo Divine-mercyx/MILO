@@ -10,8 +10,6 @@ const Swap: React.FC = () => {
     const [showSendDropdown, setShowSendDropdown] = useState(false);
     const [showReceiveDropdown, setShowReceiveDropdown] = useState(false);
 
-
-    setPrice(0.00);
     // Available assets for dropdown
     const sendAssets = ["USDC", "USDT", "SUI"];
     const receiveAssets = ["NGN", "USD", "EUR"];
