@@ -3,7 +3,6 @@ import Website from "./pages/Website.tsx";
 import { useCurrentAccount, useSuiClient } from "@mysten/dapp-kit";
 import ChatHome from "./components/newChat/Chat.tsx";
 import {WalletConnection} from "./components/landing/WalletConnection.tsx";
-import React from "react";
 import {useState, useEffect} from "react";
 import {ChevronDown} from "lucide-react";
 
