@@ -170,6 +170,9 @@ const BankAccountExample: React.FC = () => {
     const [selectedBank, setSelectedBank] = useState<Bank | null>(null);
     const [accountNumber, setAccountNumber] = useState<string>("");
 
+    console.log(selectedBank);
+    console.log(accountNumber);
+
     const handleBankChange = (bank: Bank | null) => {
         setSelectedBank(bank);
         console.log('Bank selected:', bank);

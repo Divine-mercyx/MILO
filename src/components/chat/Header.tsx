@@ -70,14 +70,14 @@ const Header: React.FC = () => {
                         <div className="flex items-center space-x-2 sm:space-x-4">
                             {/* Desktop Icons */}
                             <div className="hidden lg:flex items-center space-x-4">
-                                <CustomerCare className="w-7 h-7 text-[#6C55F5] hover:text-[#5a47d1] transition-colors cursor-pointer"/>
-                                <Clock className="w-7 h-7 text-[#6C55F5] hover:text-[#5a47d1] transition-colors cursor-pointer"/>
+                                <CustomerCare />
+                                <Clock />
                             </div>
 
                             {/* Mobile Icons */}
                             <div className="flex lg:hidden items-center space-x-3">
-                                <CustomerCare className="w-6 h-6 text-[#6C55F5]"/>
-                                <Clock className="w-6 h-6 text-[#6C55F5]"/>
+                                <CustomerCare />
+                                <Clock />
                             </div>
                         </div>
                     </div>

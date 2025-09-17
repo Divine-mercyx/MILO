@@ -11,6 +11,7 @@ const Swap: React.FC = () => {
     const [showReceiveDropdown, setShowReceiveDropdown] = useState(false);
 
 
+    setPrice(0.00);
     // Available assets for dropdown
     const sendAssets = ["USDC", "USDT", "SUI"];
     const receiveAssets = ["NGN", "USD", "EUR"];
@@ -79,7 +80,7 @@ const Swap: React.FC = () => {
                                 </div>
 
                                 <div className="border border-l-0 border-r-0 border-[#7062FF] h-[70px] w-[70px] bg-white flex justify-center items-center rounded-full absolute top-[350px] left-[710px]">
-                                    <SwapIcon2 className="w-8 h-8 m-4 text-[#7062FF]" />
+                                    <SwapIcon2 />
                                 </div>
                             </div>
 
