@@ -50,7 +50,6 @@ export async function buildTransaction(intent: Intent): Promise<TransactionBlock
 
 /** --- ACTION HANDLERS --- **/
 
-// query-balance is handled outside (no tx needed)
 const getBalance = () => {
     const currentAccount = useCurrentAccount();
     const suiClient = useSuiClient();
