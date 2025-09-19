@@ -9,7 +9,7 @@ type Contact = {
     address: string;
 };
 
-const ChatHeader: FC = () => {
+const ChatHeader: React.FC = () => {
     const [isOpen, setIsOpen] = useState(false);
     const {addContact, contacts} = useContacts();
 

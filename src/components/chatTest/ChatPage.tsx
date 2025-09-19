@@ -63,6 +63,7 @@ const ChatPage: React.FC = () => {
                     <ContactModal
                         onClose={() => setModalOpen(false)}
                         onAddContact={handleAddContact}
+                        contacts={contacts}
                     />
                 )}
             </div>
