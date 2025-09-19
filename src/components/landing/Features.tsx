@@ -5,8 +5,6 @@ import img3 from '../../assets/icons/img_2.png';
 import img4 from '../../assets/icons/img_3.png';
 import img5 from '../../assets/icons/img_4.png';
 import img6 from '../../assets/icons/img_5.png';
-import img7 from '../../assets/icons/img_6.png';
-
 
 
 
@@ -40,7 +38,14 @@ const Features: React.FC = () => {
                     <img src={img6} alt="Feature 1" className="w-full h-full object-cover" />
                 </div>
             </div>
-            <img src={img7} alt="Feature 1" className="w-full mt-6 h-full object-cover" />
+            <div style={{ borderRadius: "20px", fontFamily: "poppins" }} className="pt-10 pl-8 pb-8 pr-10 bg-[#F3F3F3CF] rounded-lg mt-6">
+                <h1 className="text-[#7062FF] text-[25px] lg:text-[20px] font-bold">
+                    Works Everywhere
+                </h1>
+                <p style={{ position: "relative", bottom: "15px" }} className="text-[#787878] text-[18px] lg:text-[16px] mt-4">
+                    RESPONSIVE WEB APP + iOS & ANDROID SOON.
+                </p>
+            </div>
         </div>
     );
 };

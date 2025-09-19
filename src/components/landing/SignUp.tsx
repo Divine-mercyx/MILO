@@ -25,7 +25,7 @@ const SignUp: React.FC = () => {
         //             <img src={img3} className="w-auto mt-[70px] h-[170px]" />
         //
         //             {/*<p style={{ fontFamily: "poppins" }} className="text-[31.6px] mt-[50px] text-[#787878]">*/}
-        //             {/*    Create your MILO wallet once and instantly chat, send, swap, and manage your assets. No extra apps, no friction.*/}
+        //             {/*    Create your MILO wallet once and instantly chatTest, send, swap, and manage your assets. No extra apps, no friction.*/}
         //             {/*</p>*/}
         //         </div>
         //     </div>
