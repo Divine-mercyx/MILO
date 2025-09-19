@@ -5,6 +5,7 @@ import * as dotenv from "dotenv";
 import type { Intent } from "../lib/suiTxBuilder.js";
 import { buildTransaction } from "../lib/suiTxBuilder.js";
 
+
 dotenv.config();
 
 const PRIVATE_KEY = process.env.SUI_PRIVATE_KEY;
@@ -16,7 +17,6 @@ if (!RECIPIENT) throw new Error("Missing ADDRESS in .env");
 const PRIVATE_KEY_STR: string = PRIVATE_KEY;
 const RECIPIENT_STR: string = RECIPIENT;
 
-// Initialize Sui client (testnet)
 const client = new SuiClient({ url: getFullnodeUrl("testnet") });
 
 async function getBalance(address: string) {
@@ -25,7 +25,6 @@ async function getBalance(address: string) {
 }
 
 async function main() {
-  // Setup keypair
   const secretKey = fromB64(PRIVATE_KEY_STR).slice(1);
   const keypair = Ed25519Keypair.fromSecretKey(secretKey);
   const sender = keypair.getPublicKey().toSuiAddress();
@@ -33,7 +32,6 @@ async function main() {
   console.log("Sender:", sender);
   console.log("Recipient:", RECIPIENT);
 
-  // Check balances before
   const senderBefore = await getBalance(sender);
   const recipientBefore = await getBalance(RECIPIENT_STR);
   console.log(`💰 Sender before: ${senderBefore} SUI`);
@@ -44,19 +42,16 @@ async function main() {
     return;
   }
 
-  // Build intent
   const intent: Intent = {
     action: "transfer",
     asset: "SUI",
     amount: 1, 
     recipient: RECIPIENT_STR,
-    gasBudget: 10000000, // 10M MIST
+    gasBudget: 10000000, 
   };
 
-  // Build transaction
   const txb = await buildTransaction(intent);
 
-  // Sign + execute
   const result = await client.signAndExecuteTransactionBlock({
     signer: keypair,
     transactionBlock: txb,

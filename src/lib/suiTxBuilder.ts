@@ -1,5 +1,7 @@
 import { TransactionBlock } from "@mysten/sui.js/transactions";
-export const SUPPORTED_ASSETS = ["SUI", "CETUS", "USDC", "BTC", "ETH", "USDTgit add src/lib/suiTxBuilder.ts"] as const;
+import { SuiClient, getFullnodeUrl } from "@mysten/sui/client";
+
+export const SUPPORTED_ASSETS = ["SUI", "CETUS", "USDC", "BTC", "ETH", "USDT"] as const;
 export type Asset = typeof SUPPORTED_ASSETS[number];
 
 export interface Intent {
@@ -37,6 +39,9 @@ export async function buildTransaction(intent: Intent): Promise<TransactionBlock
       buildSwapTx(txb, intent);
       break;
 
+    case "query-balance":
+      throw new Error("query-balance is not a transaction. Use queryBalance() instead.");
+
     default:
       throw new Error(`Unknown action: ${intent.action}`);
   }
@@ -45,7 +50,6 @@ export async function buildTransaction(intent: Intent): Promise<TransactionBlock
 }
 
 /** --- ACTION HANDLERS --- **/
-
 // 🔹 Transfer SUI
 function buildTransferTx(
   txb: TransactionBlock,
@@ -102,4 +106,19 @@ function buildSwapTx(
       txb.pure(amount * 1e9),
     ],
   });
+}
+
+
+/** --- QUERY HANDLER --- **/
+export async function queryBalance(address: string, asset: Asset = "SUI") {
+  const client = new SuiClient({ url: getFullnodeUrl("testnet") });
+
+  let coinType = "0x2::sui::SUI";
+  if (asset !== "SUI") {
+    // TODO: Map other assets like USDC, CETUS with their CoinType
+    throw new Error(`Balance query for ${asset} not implemented yet`);
+  }
+
+  const res = await client.getBalance({ owner: address, coinType });
+  return Number(res.totalBalance) / 1e9; // Convert from MIST → SUI
 }
