@@ -5,9 +5,10 @@ import type { Contact } from '../../types/types.ts';
 interface ContactModalProps {
     onClose: () => void;
     onAddContact: (contact: Contact) => void;
+    contacts: Contact[];
 }
 
-const ContactModal: React.FC<ContactModalProps> = ({ onClose, onAddContact }) => {
+const ContactModal: React.FC<ContactModalProps> = ({ onClose, onAddContact, contacts }) => {
     const [name, setName] = useState('');
     const [address, setAddress] = useState('');
 
@@ -59,6 +60,16 @@ const ContactModal: React.FC<ContactModalProps> = ({ onClose, onAddContact }) =>
                             Save Contact
                         </button>
                     </div>
+                    {contacts.length > 0 && (
+                        contacts.map((contact, index) => (
+                            <>
+                                <div key={index} className="mt-4 p-3 border border-gray-200 rounded-lg bg-gray-50">
+                                    <p className="text-sm font-medium text-gray-900">{contact.name}</p>
+                                    <p className="text-xs text-gray-500 break-all">{contact.address}</p>
+                                </div>
+                            </>
+                        )
+                    ))}
                 </form>
             </div>
         </div>

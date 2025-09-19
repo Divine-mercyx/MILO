@@ -1,11 +1,38 @@
 import { ConnectButton, useCurrentAccount } from "@mysten/dapp-kit";
-import { useState } from "react";
+import {useEffect, useState} from "react";
 import { Wallet, ChevronDown, Copy, ExternalLink } from "lucide-react";
+import {useSuiClient} from "@mysten/dapp-kit";
 
 export const WalletConnection = () => {
     const currentAccount = useCurrentAccount();
     const [isDropdownOpen, setIsDropdownOpen] = useState(false);
     const [copied, setCopied] = useState(false);
+    const suiClient = useSuiClient();
+    const [balance, setBalance] = useState<number | null>(null);
+    const [loading, setLoading] = useState(false);
+    const [error, setError] = useState<string | null>(null);
+
+    useEffect(() => {
+        const fetchBalance = async () => {
+            if (!currentAccount?.address) {
+                setBalance(null);
+                return;
+            }
+            try {
+                setLoading(true);
+                const balance = await suiClient.getBalance({
+                    owner: currentAccount.address,
+                });
+                setBalance(Number(balance.totalBalance) / 1_000_000_000);
+            } catch (err: any) {
+                setError(err.message || "Failed to fetch balance");
+            } finally {
+                setLoading(false);
+            }
+        };
+
+        fetchBalance();
+    }, [suiClient, currentAccount?.address]);
 
     const copyAddress = () => {
         if (currentAccount?.address) {
@@ -51,9 +78,16 @@ export const WalletConnection = () => {
                                     <Wallet className="w-6 h-6 text-white" />
                                 </div>
                                 <div className="flex-1">
-                                    <p className="text-sm font-medium text-white">Wallet Connected</p>
-                                    <p className="text-xs text-white/60 font-mono break-all">
-                                        {currentAccount.address}
+                                    <p className="text-sm font-medium mb-2 text-white">Wallet Connected</p>
+                                    <p className="text-xs text-white/80 break-all">
+                                        {/*{currentAccount.address}*/}
+                                        <span className="text-3xl font-bold min-w-[150px]">
+                                            {loading && "Loading..."}
+                                            {error && `Error: ${error}`}
+                                            {balance !== null && !loading && !error && (
+                                                <span className="font-medium flex">{balance.toFixed(2)} SUI</span>
+                                            )}
+                                        </span>
                                     </p>
                                 </div>
                             </div>
