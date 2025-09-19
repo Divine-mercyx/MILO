@@ -53,11 +53,12 @@ const ChatHeader: React.FC = () => {
                         <WalletConnection />
                     </div>
                 </div>
-
-                {isOpen && (
-                    <ContactModal onClose={onClose} onAddContact={onAddContact} contacts={contacts} />
-                )}
             </div>
+
+
+            {isOpen && (
+                <ContactModal onClose={onClose} onAddContact={onAddContact} contacts={contacts} />
+            )}
         </>
     )
 
