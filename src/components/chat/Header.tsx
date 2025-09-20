@@ -2,17 +2,20 @@ import React, { useState } from 'react';
 import {Clock, CustomerCare, Logo} from "../../assets/icons/icons.tsx";
 import {WalletConnection} from "../landing/WalletConnection.tsx";
 import ContactModal from "../chatTest/ContactModal.tsx";
-import {useContacts} from "../../hooks/useContacts.ts";
 
 type Contact = {
     name: string;
     address: string;
 };
 
-const ChatHeader: React.FC = () => {
-    const [isOpen, setIsOpen] = useState(false);
-    const {addContact, contacts} = useContacts();
+interface ChatHeaderProps {
+    addContact: (contact: Contact) => void;
+    contacts: Contact[];
+}
 
+
+const ChatHeader: React.FC<ChatHeaderProps> = ({ addContact, contacts }) => {
+    const [isOpen, setIsOpen] = useState(false);
 
     const onAddContact = (contact: Contact) => {
         addContact(contact);
@@ -61,7 +64,6 @@ const ChatHeader: React.FC = () => {
             )}
         </>
     )
-
 }
 
 export default ChatHeader;

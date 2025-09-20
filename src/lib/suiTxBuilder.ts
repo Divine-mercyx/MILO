@@ -1,4 +1,6 @@
-import { TransactionBlock } from "@mysten/sui.js/transactions";
+// lib/suiTxBuilder.ts - UPDATED FOR NEW SDK
+import { Transaction } from "@mysten/sui/transactions";
+
 export const SUPPORTED_ASSETS = ["SUI", "CETUS", "USDC", "BTC", "ETH"] as const;
 export type Asset = typeof SUPPORTED_ASSETS[number];
 
@@ -6,101 +8,102 @@ export interface Intent {
   action: "transfer" | "mint" | "stake" | "swap" | "query-balance";
   asset?: Asset;
   amount?: number;
-  recipient?: string; // or validator / target
-  gasBudget?: number,
-  metadata?: string; // for NFT mint
-  target?: string;   // for swap target
+  recipient?: string;
+  gasBudget?: number;
+  metadata?: string;
+  target?: string;
 }
 
-export async function buildTransaction(intent: Intent): Promise<TransactionBlock> {
-  const txb = new TransactionBlock();
+export async function buildTransaction(intent: Intent): Promise<Transaction> {
+  const tx = new Transaction();
 
   if (intent.gasBudget) {
-    txb.setGasBudget(intent.gasBudget);
+    tx.setGasBudget(intent.gasBudget);
   }
 
   switch (intent.action) {
-
     case "transfer":
-      buildTransferTx(txb, intent);
+      buildTransferTx(tx, intent);
       break;
-
     case "mint":
-      buildMintTx(txb, intent);
+      buildMintTx(tx, intent);
       break;
-
     case "stake":
-      buildStakeTx(txb, intent);
+      buildStakeTx(tx, intent);
       break;
-
     case "swap":
-      buildSwapTx(txb, intent);
+      buildSwapTx(tx, intent);
       break;
-
     default:
       throw new Error(`Unknown action: ${intent.action}`);
   }
 
-  return txb;
+  return tx;
 }
 
 /** --- ACTION HANDLERS --- **/
 
-
-// 🔹 Transfer SUI
+// 🔹 Transfer SUI (UPDATED FOR NEW SDK)
 function buildTransferTx(
-  txb: TransactionBlock,
-  { amount = 0, recipient }: Intent
+    tx: Transaction, // ← Changed from TransactionBlock to Transaction
+    { amount = 0, recipient }: Intent
 ) {
   if (!recipient) throw new Error("Recipient is required for transfer");
   if (amount <= 0) throw new Error("Transfer amount must be greater than 0");
+
   const mistAmount = BigInt(amount * 1e9);
 
-  const [coinToSend] = txb.splitCoins(txb.gas, [txb.pure(mistAmount)]);
-
-  txb.transferObjects([coinToSend], txb.pure(recipient));
+  // NEW API: Much simpler!
+  const [coin] = tx.splitCoins(tx.gas, [mistAmount]);
+  tx.transferObjects([coin], recipient);
 }
 
-// 🔹 Mint NFT (stub – replace with your package/module)
+// 🔹 Mint NFT (UPDATED)
 function buildMintTx(
-  txb: TransactionBlock,
-  { metadata = "My NFT" }: Intent
+    tx: Transaction,
+    { metadata = "My NFT" }: Intent
 ) {
-  txb.moveCall({
+  tx.moveCall({
     target: "0xNFT_PACKAGE_ID::nft_module::mint",
     arguments: [
-      txb.pure(metadata),
-      txb.pure("https://example.com/nft.png"),
+      tx.pure.string(metadata), // ← .string() for string types
+      tx.pure.string("https://example.com/nft.png"),
     ],
   });
 }
 
-// 🔹 Stake SUI (stub – requires validator address)
+// 🔹 Stake SUI (UPDATED)
 function buildStakeTx(
-  txb: TransactionBlock,
-  { amount = 0, recipient: validator }: Intent
+    tx: Transaction,
+    { amount = 0, recipient: validator }: Intent
 ) {
   if (!validator) throw new Error("Validator address required for stake");
   const mistAmount = BigInt(amount * 1e9);
-  const [stakeCoin] = txb.splitCoins(txb.gas, [txb.pure(mistAmount)]);
-  txb.moveCall({
-    target: "0x2::sui_system::request_add_stake",
-    arguments: [txb.object("0x5"), stakeCoin, txb.pure(validator)],
+
+  const [stakeCoin] = tx.splitCoins(tx.gas, [mistAmount]);
+  tx.moveCall({
+    target: "0x3::sui_system::request_add_stake", // ← Note: 0x3 instead of 0x2
+    arguments: [
+      tx.object("0x5"),
+      stakeCoin,
+      tx.pure.address(validator) // ← .address() for addresses
+    ],
   });
 }
 
-// 🔹 Swap (stub – depends on DEX package on Sui)
+// 🔹 Swap (UPDATED)
 function buildSwapTx(
-  txb: TransactionBlock,
-  { amount = 0, asset, target }: Intent
+    tx: Transaction,
+    { amount = 0, asset, target }: Intent
 ) {
   if (!asset || !target) throw new Error("Swap requires asset + target");
-  txb.moveCall({
+
+  tx.moveCall({
     target: "0xDEX_PACKAGE::swap_module::swap_exact_input",
     arguments: [
-      txb.pure(asset),
-      txb.pure(target),
-      txb.pure(amount * 1e9),
+      tx.pure.string(asset),
+      tx.pure.string(target),
+      tx.pure.u64(amount * 1e9), // ← .u64() for numbers
     ],
   });
 }
