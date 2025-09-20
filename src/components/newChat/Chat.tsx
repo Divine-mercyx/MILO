@@ -1,20 +1,103 @@
 import React, {useEffect} from "react";
 import { ReplaceAll, Gem, Mic, Send, ArrowRightLeftIcon } from "lucide-react";
-import { useState } from "react";
+import { useState, useRef } from "react";
 import ChatHeader from "../chat/Header.tsx";
 import Swap from "../chat/swap/Swap.tsx";
+import {useContacts} from "../../hooks/useContacts.ts";
+import {useSignTransaction} from "@mysten/dapp-kit";
+import {buildTransaction} from "../../lib/suiTxBuilder.ts";
+
+type Message = {
+    sender: "user" | "bot";
+    text: string;
+};
+
 
 const ChatHome: React.FC = () => {
-    const [messages, setMessages] = useState<string[]>([]);
+    const [messages, setMessages] = useState<Message[]>([]);
+    const [loading, setLoading] = useState(false);
     const [input, setInput] = useState("");
     const [greet, setGreet] = useState("1");
     const [steps, setSteps] = useState("send");
+    const chatEndRef = useRef(null);
+    const {addContact, contacts} = useContacts();
+    const { mutate: signTransaction } = useSignTransaction();
 
-    const handleSendMessage = (message: string) => {
-        if (message.trim() === "") return;
-        setMessages([...messages, message]);
-        setInput("");
+    useEffect(() => {
+        chatEndRef.current?.scrollIntoView({ behavior: "smooth" });
+    }, [messages]);
+
+    const executeTransfer = async (intent: any) => {
+        try {
+            const transaction = await buildTransaction(intent);
+            console.log(transaction);
+            signTransaction(
+                {
+                    transaction: transaction,
+                },
+                {
+                    onSuccess: (result) => {
+                        setMessages(prev => [...prev, {
+                            sender: "bot",
+                            text: `✅ Transaction successful! View it on the explorer: https://suiscan.xyz/testnet/tx/${result.digest}`
+                        }]);
+                    },
+                    onError: (error) => {
+                        console.error("Transaction failed:", error);
+                        setMessages(prev => [...prev, {
+                            sender: "bot",
+                            text: `❌ Transaction failed: ${error.message || "Unknown error"}`
+                        }]);
+                    }
+                }
+            );
+
+        } catch (e) {
+            console.error("Transaction building failed:", error);
+            setMessages(prev => [...prev, {
+                sender: "bot",
+                text: `❌ Failed to create transaction: ${error.message}`
+            }]);
+        }
     }
+
+
+        const handleSendMessage = async (message: string) => {
+        if (message.trim() === "") return;
+
+        setMessages(prev => [...prev, { sender: "user", text: message }]);
+        setInput("");
+
+        console.log(contacts);
+
+        try {
+            setLoading(true);
+            const res = await fetch("https://milobrain.onrender.com/api/v1/ai/response", {
+                method: "POST",
+                headers: { "Content-Type": "application/json" },
+                body: JSON.stringify({ prompt: message, contacts: contacts })
+            });
+
+            const data = await res.json();
+
+            if (data.action === "transfer") {
+                const botText = data.message || data.reply || data.error || "Sorry, something went wrong.";
+                setMessages(prev => [...prev, { sender: "bot", text: botText }]);
+                await executeTransfer(data);
+            } else {
+                const botText = data.message || data.reply || data.error || "Sorry, something went wrong.";
+                setMessages(prev => [...prev, { sender: "bot", text: botText }]);
+            }
+
+
+
+        } catch (err) {
+            setMessages(prev => [...prev, { sender: "bot", text: "Server error. Try again later." }]);
+        } finally {
+            setLoading(false);
+        }
+    };
+
 
     useEffect(() => {
         setTimeout(() => {
@@ -25,12 +108,44 @@ const ChatHome: React.FC = () => {
     return (
         <div className={`flex w-full flex-col items-center min-h-screen bg-[#ffffff] text-gray-600`}>
             <div className="bg-white w-full font-sans text-milo-text relative">
-                <ChatHeader />
+                <ChatHeader addContact={addContact} contacts={contacts} />
             </div>
 
             { steps === "swap" && (
                 <Swap />
             )}
+
+            { steps !== "swap" && (
+                <>
+                    <br /><br /><br /><br /><br />
+                </>
+                )}
+            {loading && <div className="text-sm text-gray-400 mb-2">Milo is thinking...</div>}
+            { steps !== "swap" && (
+                <>
+                    <div className="w-full max-w-[700px] px-4 mb-4 space-y-2">
+                        {messages.map((msg, index) => (
+                            <div
+                                key={index}
+                                className={`flex ${msg.sender === "user" ? "justify-end" : "justify-start"}`}
+                            >
+                                <div
+                                    className={`max-w-[80%] px-4 py-2 rounded-xl text-sm ${
+                                        msg.sender === "user"
+                                            ? "bg-[#6C55F5] text-white rounded-br-none"
+                                            : "bg-gray-100 text-gray-800 rounded-bl-none"
+                                    }`}
+                                >
+                                    {msg.text}
+                                </div>
+                            </div>
+                        ))}
+                    </div>
+                    <div ref={chatEndRef} />
+                </>
+            )}
+
+
 
             <div className={`hidden lg:flex flex-col items-center ${ messages.length == 0 ? "justify-center" : "justify-end"} flex-1 px-4 md:px-0`}>
                 { steps === "send" && (
