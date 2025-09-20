@@ -23,6 +23,8 @@ const ChatHome: React.FC = () => {
     const {addContact, contacts} = useContacts();
     const { mutate: signTransaction } = useSignTransaction();
 
+    console.log("Contacts:", contacts);
+
     useEffect(() => {
         chatEndRef.current?.scrollIntoView({ behavior: "smooth" });
     }, [messages]);
