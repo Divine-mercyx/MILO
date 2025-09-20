@@ -7,6 +7,7 @@ import {useContacts} from "../../hooks/useContacts.ts";
 import {useSignTransaction} from "@mysten/dapp-kit";
 import {buildTransaction} from "../../lib/suiTxBuilder.ts";
 
+
 type Message = {
     sender: "user" | "bot";
     text: string;
@@ -19,7 +20,7 @@ const ChatHome: React.FC = () => {
     const [input, setInput] = useState("");
     const [greet, setGreet] = useState("1");
     const [steps, setSteps] = useState("send");
-    const chatEndRef = useRef(null);
+    const chatEndRef = useRef<HTMLDivElement>(null);
     const {addContact, contacts} = useContacts();
     const { mutate: signTransaction } = useSignTransaction();
 
@@ -36,13 +37,13 @@ const ChatHome: React.FC = () => {
                     transaction: transaction,
                 },
                 {
-                    onSuccess: (result) => {
+                    onSuccess: () => {
                         setMessages(prev => [...prev, {
                             sender: "bot",
-                            text: `✅ Transaction successful! View it on the explorer: https://suiscan.xyz/testnet/tx/${result.digest}`
+                            text: `✅ Transaction successful! View it on the testnet explorer`
                         }]);
                     },
-                    onError: (error) => {
+                    onError: (error: Error) => {
                         console.error("Transaction failed:", error);
                         setMessages(prev => [...prev, {
                             sender: "bot",
@@ -56,7 +57,7 @@ const ChatHome: React.FC = () => {
             console.error("Transaction building failed:", error);
             setMessages(prev => [...prev, {
                 sender: "bot",
-                text: `❌ Failed to create transaction: ${error.message}`
+                text: `❌ Failed to create transaction: ${error instanceof Error ? error.message : "Unknown error"}`
             }]);
         }
     }
@@ -92,7 +93,11 @@ const ChatHome: React.FC = () => {
 
 
         } catch (err) {
-            setMessages(prev => [...prev, { sender: "bot", text: "Server error. Try again later." }]);
+            const error = err as Error;
+            setMessages(prev => [...prev, {
+                sender: "bot",
+                text: `Server error: ${error.message}. Please try again later.`
+            }]);
         } finally {
             setLoading(false);
         }
