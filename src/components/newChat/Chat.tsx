@@ -29,8 +29,8 @@ const ChatHome: React.FC = () => {
 
     const executeTransfer = async (intent: any) => {
         try {
-            const transactionBlock = await buildTransaction(intent);
-            console.log(transactionBlock);
+            const transaction = await buildTransaction(intent);
+
             signTransaction(
                 {
                     transaction: transaction,
@@ -52,7 +52,7 @@ const ChatHome: React.FC = () => {
                 }
             );
 
-        } catch (e) {
+        } catch (error) {
             console.error("Transaction building failed:", error);
             setMessages(prev => [...prev, {
                 sender: "bot",
