@@ -4,7 +4,7 @@ import { useState, useRef } from "react";
 import ChatHeader from "../chat/Header.tsx";
 import Swap from "../chat/swap/Swap.tsx";
 import {useContacts} from "../../hooks/useContacts.ts";
-import {useSignTransaction} from "@mysten/dapp-kit";
+import {useSignTransaction, useSuiClient} from "@mysten/dapp-kit";
 import {buildTransaction} from "../../lib/suiTxBuilder.ts";
 
 
@@ -23,25 +23,56 @@ const ChatHome: React.FC = () => {
     const chatEndRef = useRef<HTMLDivElement>(null);
     const {addContact, contacts} = useContacts();
     const { mutate: signTransaction } = useSignTransaction();
+    const client = useSuiClient();
 
     useEffect(() => {
         chatEndRef.current?.scrollIntoView({ behavior: "smooth" });
     }, [messages]);
+
+
+    const submitTransaction = async (bytes: string, signature: string) => {
+        try {
+            const response = await client.executeTransactionBlock({
+                transactionBlock: bytes,
+                signature: signature,
+                options: {
+                    showEffects: true,
+                    showEvents: true,
+                },
+            });
+
+            const digest = response.digest;
+            setMessages((prev) => [
+                ...prev,
+                {
+                    sender: "bot",
+                    text: `✅ Transaction successful! View it on the testnet explorer: https://suiexplorer.com/tx/${digest}?network=testnet`,
+                },
+            ]);
+        } catch (error) {
+            console.error("Failed to submit transaction:", error);
+            setMessages((prev) => [
+                ...prev,
+                {
+                    sender: "bot",
+                    text: `❌ Transaction submission failed: ${
+                        error instanceof Error ? error.message : "Unknown error"
+                    }`,
+                },
+            ]);
+        }
+    };
+
 
     const executeTransfer = async (intent: any) => {
         try {
             const transaction = await buildTransaction(intent);
 
             signTransaction(
+                { transaction },
                 {
-                    transaction: transaction,
-                },
-                {
-                    onSuccess: () => {
-                        setMessages(prev => [...prev, {
-                            sender: "bot",
-                            text: `✅ Transaction successful! View it on the testnet explorer`
-                        }]);
+                    onSuccess: async ({ bytes, signature }) => {
+                        await submitTransaction(bytes, signature);
                     },
                     onError: (error: Error) => {
                         console.error("Transaction failed:", error);
@@ -149,8 +180,6 @@ const ChatHome: React.FC = () => {
                     <div ref={chatEndRef} />
                 </>
             )}
-
-
 
             <div className={`hidden lg:flex flex-col items-center ${ messages.length == 0 ? "justify-center" : "justify-end"} flex-1 px-4 md:px-0`}>
                 { steps === "send" && (
