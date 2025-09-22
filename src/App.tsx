@@ -1,10 +1,7 @@
 import './App.css'
 import Website from "./pages/Website.tsx";
-import { useCurrentAccount, useSuiClient } from "@mysten/dapp-kit";
+import { useCurrentAccount } from "@mysten/dapp-kit";
 import ChatHome from "./components/newChat/Chat.tsx";
-import {WalletConnection} from "./components/landing/WalletConnection.tsx";
-import {useState, useEffect} from "react";
-import {ChevronDown} from "lucide-react";
 
 
 
@@ -40,6 +37,7 @@ function App() {
     }, [suiClient, currentAccount?.address]);
 
 
+
     if (!currentAccount) {
         return (
             <Website />
@@ -47,18 +45,6 @@ function App() {
     } else {
         return (
             <>
-                <div className="flex absolute right-3 top-0 p-4">
-                    <div className="flex items-center gap-4">
-                        <button className="border px-6 py-2 rounded-1xl bg-white hover:bg-gray-50 transition flex items-center justify-center min-w-[150px]">
-                            {loading && "Loading..."}
-                            {error && `Error: ${error}`}
-                            {balance !== null && !loading && !error && (
-                                <span className="font-medium flex items-center text-center text-gray-700">Bal: {balance.toFixed(2)} SUI <ChevronDown size={18} className={"ml-3"} /></span>
-                            )}
-                        </button>
-                        <WalletConnection />
-                    </div>
-                </div>
                 <ChatHome />
             </>
         );
