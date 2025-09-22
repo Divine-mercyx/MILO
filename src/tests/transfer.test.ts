@@ -2,9 +2,8 @@ import { describe, it, expect } from "vitest";
 import { buildTransaction } from "../lib/suiTxBuilder.js";
 import type { Intent } from "../lib/suiTxBuilder.js";
 
-// Mock balance fetcher (instead of hitting Sui testnet directly)
 async function mockGetBalance(_address: string) {
-  return 100; // Pretend everyone starts with 100 SUI
+  return 100; 
 }
 
 describe("Sui Transaction Builder", () => {
@@ -18,7 +17,6 @@ describe("Sui Transaction Builder", () => {
 
     const txb = await buildTransaction(intent);
 
-    // The transaction should have instructions
     expect(txb).toBeDefined();
     expect(typeof txb).toBe("object");
   });
@@ -27,7 +25,6 @@ describe("Sui Transaction Builder", () => {
     const senderBalanceBefore = await mockGetBalance("0xSENDER");
     const recipientBalanceBefore = await mockGetBalance("0xRECIPIENT");
 
-    // Simulate transfer of 1 SUI
     const transferAmount = 1;
     const senderBalanceAfter = senderBalanceBefore - transferAmount;
     const recipientBalanceAfter = recipientBalanceBefore + transferAmount;

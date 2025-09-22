@@ -12,13 +12,16 @@
     "test:watch": "vitest"
   },
   "dependencies": {
+    "@multiformats/multiaddr": "^13.0.1",
     "@mysten/dapp-kit": "^0.18.0",
     "@mysten/sui": "^1.38.0",
     "@mysten/sui.js": "^0.54.1",
     "@tanstack/react-query": "^5.87.4",
     "@types/dom-speech-recognition": "^0.0.6",
     "dotenv": "^17.2.2",
+    "latest": "^0.2.0",
     "lucide-react": "^0.544.0",
+    "nft.storage": "^7.2.0",
     "react": "^19.1.1",
     "react-dom": "^19.1.1",
     "react-speech-recognition": "^4.0.1"

@@ -17,11 +17,10 @@ export function parseIntent(text: string): Intent {
     "i"
   );
 
-  // ✅ Match transfer
   const transferMatch = input.match(transferRegex);
   if (transferMatch) {
     const amount = Number(transferMatch[1]);
-    const asset = (transferMatch[2]?.toUpperCase() as Asset) || "SUI"; // default SUI
+    const asset = (transferMatch[2]?.toUpperCase() as Asset) || "SUI"; 
     const recipient = transferMatch[3];
 
     return {
@@ -46,6 +45,7 @@ export function parseIntent(text: string): Intent {
       target,
     };
   }
+
 
   throw new Error(
     `Could not parse intent. Examples:\n` +

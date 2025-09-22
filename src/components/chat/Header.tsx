@@ -1,7 +1,18 @@
 import React, { useState } from 'react';
 import {Clock, CustomerCare, Logo} from "../../assets/icons/icons.tsx";
+import type {Contact} from "../../hooks/useContacts.ts";
 import {WalletConnection} from "../landing/WalletConnection.tsx";
 import ContactModal from "../chatTest/ContactModal.tsx";
+
+interface ChatHeaderProps {
+  addContact: (newContact: Contact) => void;
+  contacts: Contact[];
+}
+
+const Header: React.FC <ChatHeaderProps> = ({ addContact, contacts }) => {
+    const [isOpen, setIsOpen] = useState(false);
+    const [isScrolled, setIsScrolled] = useState(false);
+    
 
 type Contact = {
     name: string;
@@ -26,11 +37,28 @@ const ChatHeader: React.FC<ChatHeaderProps> = ({ addContact, contacts }) => {
     }
 
 
+    const handleAddContact = () => {
+        const newContact: Contact = { name: "New User", address: "0x1234567890abcdef1234567890abcdef1234567890abcdef1234567890abcdef" };
+        addContact(newContact);
+    };
+  
     return (
         <>
             <div className="flex w-full items-center fixed z-50 justify-between py-4 px-6 lg:px-[190px] bg-white/95 backdrop-blur-lg shadow-sm">
                 <Logo className={"lg:w-[260px]"} />
 
+                        {/* Desktop Navigation */}
+                        <nav className="hidden lg:flex items-center space-x-4">
+                            <button className="group relative text-white rounded-l-3xl font-semibold flex items-center gap-3 px-8 py-3 bg-[#6C55F5] backdrop-blur-xl border border-white/20 rounded-lg shadow-2xl hover:shadow-purple-500/25 transition-all duration-300 hover:scale-105 hover:border-white/30">
+                                Features
+                            </button>
+                            <button className="group relative border border-[#6C55F5] font-semibold text-[#6C55F5] flex items-center gap-3 px-8 py-3 backdrop-blur-xl rounded-lg shadow-2xl hover:shadow-purple-500/25 transition-all duration-300 hover:scale-105 hover:border-white/30" onClick={handleAddContact}>
+                                Contacts
+                            </button>
+                            <button className="group relative border border-[#6C55F5] rounded-r-3xl text-[#6C55F5] font-semibold flex items-center gap-3 px-8 py-3 backdrop-blur-xl rounded-lg shadow-2xl hover:shadow-purple-500/25 transition-all duration-300 hover:scale-105 hover:border-white/30">
+                                Docs
+                            </button>
+                        </nav>
                 <nav className="hidden lg:flex items-center space-x-4">
                     <button className="group relative text-white rounded-l-3xl font-semibold flex items-center gap-3 px-6 py-2 bg-[#6C55F5] backdrop-blur-xl border border-white/20 rounded-lg shadow-2xl hover:shadow-purple-500/25 transition-all duration-300 hover:scale-105 hover:border-white/30">
                         Features
