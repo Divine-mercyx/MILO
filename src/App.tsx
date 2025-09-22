@@ -26,6 +26,7 @@ function App() {
                 setLoading(true);
                 const balance = await suiClient.getBalance({
                     owner: currentAccount.address,
+                    coinType: "0x2::sui::SUI",
                 });
                 setBalance(Number(balance.totalBalance) / 1_000_000_000);
             } catch (err: any) {

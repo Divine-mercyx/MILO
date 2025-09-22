@@ -1,7 +1,13 @@
 import React, { useState, useEffect } from 'react';
 import {Clock, CustomerCare, Logo} from "../../assets/icons/icons.tsx";
+import type {Contact} from "../../hooks/useContacts.ts";
 
-const Header: React.FC = () => {
+interface ChatHeaderProps {
+  addContact: (newContact: Contact) => void;
+  contacts: Contact[];
+}
+
+const Header: React.FC <ChatHeaderProps> = ({ addContact, contacts }) => {
     const [isOpen, setIsOpen] = useState(false);
     const [isScrolled, setIsScrolled] = useState(false);
 
@@ -38,6 +44,11 @@ const Header: React.FC = () => {
         };
     }, [isOpen]);
 
+    const handleAddContact = () => {
+        const newContact: Contact = { name: "New User", address: "0x1234567890abcdef1234567890abcdef1234567890abcdef1234567890abcdef" };
+        addContact(newContact);
+    };
+  
     return (
         <>
             <header className={`sticky top-0 z-50 transition-all duration-300 ${
@@ -58,7 +69,7 @@ const Header: React.FC = () => {
                             <button className="group relative text-white rounded-l-3xl font-semibold flex items-center gap-3 px-8 py-3 bg-[#6C55F5] backdrop-blur-xl border border-white/20 rounded-lg shadow-2xl hover:shadow-purple-500/25 transition-all duration-300 hover:scale-105 hover:border-white/30">
                                 Features
                             </button>
-                            <button className="group relative border border-[#6C55F5] font-semibold text-[#6C55F5] flex items-center gap-3 px-8 py-3 backdrop-blur-xl rounded-lg shadow-2xl hover:shadow-purple-500/25 transition-all duration-300 hover:scale-105 hover:border-white/30">
+                            <button className="group relative border border-[#6C55F5] font-semibold text-[#6C55F5] flex items-center gap-3 px-8 py-3 backdrop-blur-xl rounded-lg shadow-2xl hover:shadow-purple-500/25 transition-all duration-300 hover:scale-105 hover:border-white/30" onClick={handleAddContact}>
                                 Contacts
                             </button>
                             <button className="group relative border border-[#6C55F5] rounded-r-3xl text-[#6C55F5] font-semibold flex items-center gap-3 px-8 py-3 backdrop-blur-xl rounded-lg shadow-2xl hover:shadow-purple-500/25 transition-all duration-300 hover:scale-105 hover:border-white/30">

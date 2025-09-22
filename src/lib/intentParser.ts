@@ -46,6 +46,7 @@ export function parseIntent(text: string): Intent {
     };
   }
 
+
   throw new Error(
     `Could not parse intent. Examples:\n` +
       `- "Send 10 SUI to Maria"\n` +

@@ -8,10 +8,11 @@ export interface Intent {
   action: "transfer" | "mint" | "stake" | "swap" | "query-balance";
   asset?: Asset;
   amount?: number;
-  recipient?: string; // or validator / target
+  recipient?: string; 
   gasBudget?: number,
-  metadata?: string; // for NFT mint
-  target?: string;   // for swap target
+  metadata?: string; 
+  target?: string;   
+  assetUrl?: string;
 }
 
 export async function buildTransaction(intent: Intent): Promise<TransactionBlock> {
@@ -67,13 +68,13 @@ function buildTransferTx(
 // 🔹 Mint NFT (stub – replace with your package/module)
 function buildMintTx(
   txb: TransactionBlock,
-  { metadata = "My NFT" }: Intent
+  { metadata = "My NFT", assetUrl }: Intent
 ) {
   txb.moveCall({
     target: "0xNFT_PACKAGE_ID::nft_module::mint",
     arguments: [
       txb.pure(metadata),
-      txb.pure("https://example.com/nft.png"),
+      txb.pure(assetUrl, "https://example.com/nft.png"),
     ],
   });
 }
@@ -120,5 +121,5 @@ export async function queryBalance(address: string, asset: Asset = "SUI") {
   }
 
   const res = await client.getBalance({ owner: address, coinType });
-  return Number(res.totalBalance) / 1e9; // Convert from MIST → SUI
+  return Number(res.totalBalance) / 1e9;
 }
