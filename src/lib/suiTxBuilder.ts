@@ -1,4 +1,4 @@
-import { TransactionBlock } from "@mysten/sui.js/transactions";
+import { Transaction } from "@mysten/sui/transactions";
 import { SuiClient, getFullnodeUrl } from "@mysten/sui/client";
 
 export const SUPPORTED_ASSETS = ["SUI", "CETUS", "USDC", "BTC", "ETH", "USDT"] as const;
@@ -10,101 +10,104 @@ export interface Intent {
   amount?: number;
   recipient?: string; 
   gasBudget?: number,
-  metadata?: string; 
+  name?: string; 
+  description?: string;
   target?: string;   
   assetUrl?: string;
 }
 
-export async function buildTransaction(intent: Intent): Promise<TransactionBlock> {
-  const txb = new TransactionBlock();
+export async function buildTransaction(intent: Intent): Promise<Transaction> {
+  const tx = new Transaction();
 
   if (intent.gasBudget) {
-    txb.setGasBudget(intent.gasBudget);
+    tx.setGasBudget(intent.gasBudget);
   }
 
   switch (intent.action) {
-
     case "transfer":
-      buildTransferTx(txb, intent);
+      buildTransferTx(tx, intent);
       break;
-
     case "mint":
-      buildMintTx(txb, intent);
+      buildMintTx(tx, intent);
       break;
-
     case "stake":
-      buildStakeTx(txb, intent);
+      buildStakeTx(tx, intent);
       break;
-
     case "swap":
-      buildSwapTx(txb, intent);
+      buildSwapTx(tx, intent);
       break;
-
     case "query-balance":
       throw new Error("query-balance is not a transaction. Use queryBalance() instead.");
-
     default:
       throw new Error(`Unknown action: ${intent.action}`);
   }
 
-  return txb;
+  return tx;
 }
 
 /** --- ACTION HANDLERS --- **/
 // 🔹 Transfer SUI
+
 function buildTransferTx(
-  txb: TransactionBlock,
-  { amount = 0, recipient }: Intent
+    tx: Transaction, 
+    { amount = 0, recipient }: Intent
 ) {
   if (!recipient) throw new Error("Recipient is required for transfer");
   if (amount <= 0) throw new Error("Transfer amount must be greater than 0");
+
   const mistAmount = BigInt(amount * 1e9);
 
-  const [coinToSend] = txb.splitCoins(txb.gas, [txb.pure(mistAmount)]);
-
-  txb.transferObjects([coinToSend], txb.pure(recipient));
+  const [coin] = tx.splitCoins(tx.gas, [mistAmount]);
+  tx.transferObjects([coin], recipient);
 }
 
-// 🔹 Mint NFT (stub – replace with your package/module)
+// 🔹 Mint NFT (UPDATED)
 function buildMintTx(
-  txb: TransactionBlock,
-  { metadata = "My NFT", assetUrl }: Intent
+  txb: Transaction,
+  { name = "My NFT", description = "Minted via Milo"  }: Intent
 ) {
   txb.moveCall({
-    target: "0xNFT_PACKAGE_ID::nft_module::mint",
+    target: "0x235af9d330fa04133b5435844910a7fad5dd5b389a7a8a3c089cf1a20001bec5::nft_module::mint",
     arguments: [
-      txb.pure(metadata),
-      txb.pure(assetUrl, "https://example.com/nft.png"),
+      txb.pure.string(name),
+      txb.pure.string(description)
+      // txb.pure.string(assetUrl),
     ],
   });
 }
 
-// 🔹 Stake SUI (stub – requires validator address)
+// 🔹 Stake SUI
 function buildStakeTx(
-  txb: TransactionBlock,
-  { amount = 0, recipient: validator }: Intent
+    tx: Transaction,
+    { amount = 0, recipient: validator }: Intent
 ) {
   if (!validator) throw new Error("Validator address required for stake");
   const mistAmount = BigInt(amount * 1e9);
-  const [stakeCoin] = txb.splitCoins(txb.gas, [txb.pure(mistAmount)]);
-  txb.moveCall({
-    target: "0x2::sui_system::request_add_stake",
-    arguments: [txb.object("0x5"), stakeCoin, txb.pure(validator)],
+
+  const [stakeCoin] = tx.splitCoins(tx.gas, [mistAmount]);
+  tx.moveCall({
+    target: "0x3::sui_system::request_add_stake", 
+    arguments: [
+      tx.object("0x5"),
+      stakeCoin,
+      tx.pure.address(validator) 
+    ],
   });
 }
 
-// 🔹 Swap (stub – depends on DEX package on Sui)
+// 🔹 Swap 
 function buildSwapTx(
-  txb: TransactionBlock,
-  { amount = 0, asset, target }: Intent
+    tx: Transaction,
+    { amount = 0, asset, target }: Intent
 ) {
   if (!asset || !target) throw new Error("Swap requires asset + target");
-  txb.moveCall({
+
+  tx.moveCall({
     target: "0xDEX_PACKAGE::swap_module::swap_exact_input",
     arguments: [
-      txb.pure(asset),
-      txb.pure(target),
-      txb.pure(amount * 1e9),
+      tx.pure.string(asset),
+      tx.pure.string(target),
+      tx.pure.u64(amount * 1e9), 
     ],
   });
 }
@@ -116,7 +119,6 @@ export async function queryBalance(address: string, asset: Asset = "SUI") {
 
   let coinType = "0x2::sui::SUI";
   if (asset !== "SUI") {
-    // TODO: Map other assets like USDC, CETUS with their CoinType
     throw new Error(`Balance query for ${asset} not implemented yet`);
   }
 

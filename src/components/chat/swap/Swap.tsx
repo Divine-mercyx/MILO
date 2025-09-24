@@ -3,7 +3,6 @@ import BankAccountExample from "./BankAccountExample.tsx";
 import {Detail, SwapIcon2} from "../../../assets/icons/icons.tsx";
 
 const Swap: React.FC = () => {
-    // State for price and dropdowns
     const [price, setPrice] = useState(0.00);
     const [sendAsset, setSendAsset] = useState("USDC");
     const [receiveAsset, setReceiveAsset] = useState("NGN");
@@ -14,7 +13,6 @@ const Swap: React.FC = () => {
         setPrice(0.00);
     }, []);
 
-    // Available assets for dropdown
     const sendAssets = ["USDC", "USDT", "SUI"];
     const receiveAssets = ["NGN", "USD", "EUR"];
 
@@ -30,9 +28,9 @@ const Swap: React.FC = () => {
 
     return (
         <>
-            <section className="relative container mx-auto px-6 py-10 sm:py-32 lg:py-10 lg:text-center">
+            <section className="mt-20 relative container mx-auto px-6 py-10 sm:py-32 lg:py-10 lg:text-center">
                 <div className="relative z-10">
-                    <h1 style={{ fontFamily: "poppins" }} className="text-3xl hidden lg:block md:block md:text-[66.55px] font-semibold text-milo-dark-purpl bg-gradient-to-r from-[#7062FF] to-[#362F7B] bg-clip-text text-transparent leading-tight lg:leading-[66px]">
+                    <h1 style={{ fontFamily: "poppins" }} className="text-3xl hidden lg:block md:block md:text-[35.55px] font-semibold text-milo-dark-purpl bg-gradient-to-r from-[#7062FF] to-[#362F7B] bg-clip-text text-transparent leading-tight lg:leading-[36px]">
                         Talk to MILO while you <br /> move your money
                     </h1>
 

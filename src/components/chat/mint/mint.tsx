@@ -1,60 +1,75 @@
 import React, { useState } from "react";
 import { Upload } from "lucide-react";
-import { useCurrentAccount } from "@mysten/dapp-kit";
-import { NFTStorage, File } from "nft.storage"; 
-import { multiaddr } from "@multiformats/multiaddr"; 
-import type { Intent } from "../../../lib/suiTxBuilder";
+import { useCurrentAccount, useSignAndExecuteTransaction } from "@mysten/dapp-kit";
+import { NFTStorage, File } from "nft.storage";
+import { buildTransaction, type Intent } from "../../../lib/suiTxBuilder";
 
 const Mint: React.FC = () => {
   const [file, setFile] = useState<File | null>(null);
   const [title, setTitle] = useState("");
   const [description, setDescription] = useState("");
-  const [collection, setCollection] = useState("");
-  const currentAccount = useCurrentAccount();
-  const [metadata, setMetadata] = useState("");
   const [fileUrl, setFileUrl] = useState("");
+  const currentAccount = useCurrentAccount();
+  const { mutateAsync: signAndExecuteTransaction } = useSignAndExecuteTransaction();
 
-  const handleFileChange = async (e: React.ChangeEvent<HTMLInputElement>) => {
+  // const handleFileChange = async (e: React.ChangeEvent<HTMLInputElement>) => {
+  //   if (e.target.files?.length) {
+  //     const uploadedFile = e.target.files[0];
+  //     setFile(uploadedFile);
+
+  //     const client = new NFTStorage({ token: import.meta.env.VITE_NFT_API_KEY });
+  //     const cid = await client.storeBlob(uploadedFile);
+  //     setFileUrl(`https://ipfs.io/ipfs/${cid}`);
+  //   }
+  // };
+
+  const handleFileChange = (e: React.ChangeEvent<HTMLInputElement>) => {
     if (e.target.files?.length) {
-      const uploadedFile = e.target.files[0];
-      setFile(uploadedFile);
-      const client = new NFTStorage({ token: import.meta.env.VITE_NFT_API_KEY });
-      const cid = await client.storeBlob(uploadedFile);
-      setFileUrl(`https://ipfs.io/ipfs/${cid}`);
+      setFile(e.target.files[0]);
     }
-  };
-
-  const handleMetadataChange = () => {
-    setMetadata(
-      JSON.stringify({
-        title,
-        description,
-        creator: currentAccount?.address || "",
-      })
-    );
-  };
+  }
 
   const handleMint = async () => {
-    if (!file || !title || !currentAccount?.address || !fileUrl) {
+    if (!file || !title || !description || !currentAccount?.address ) {
       alert("Please complete all required fields and upload a file.");
       return;
     }
 
-    console.log({ metadata, fileUrl, creator: currentAccount.address });
-    alert("Minting NFT... ");
-    const intent: Intent = { action: "mint", metadata, assetUrl: fileUrl };
-    // const txb = await buildTransaction(intent);
-    // await signAndExecuteTransaction({ transaction: txb });
+    // const metadata = JSON.stringify({
+    //   title,
+    //   description,
+    //   creator: currentAccount.address,
+    // //   assetUrl: fileUrl,
+    // });
+
+    try {
+      alert("Minting NFT...");
+
+      const intent: Intent = {
+        action: "mint",
+        name: title,
+        description,
+        // assetUrl: fileUrl,
+      };
+
+      const txb = await buildTransaction(intent);
+      const result = await signAndExecuteTransaction({
+        transaction: txb as any,
+      });
+
+      alert(`✅ NFT Minted! Digest: ${result.digest}`);
+    } catch (err: any) {
+      alert(`
+        Mint failed: ${err.message}`);
+    }
   };
 
   return (
     <div className="flex flex-col items-center justify-center py-10 px-4 min-h-screen bg-gray-50">
-      <h1
-        style={{ fontFamily: "poppins" }}
-        className="text-3xl md:text-[66.55px] font-semibold text-center mb-8 text-transparent bg-gradient-to-r from-[#7062FF] to-[#362F7B] bg-clip-text leading-tight md:leading-[66px]"
-      >
+      <h1 className="text-3xl md:text-[66.55px] font-semibold text-center mb-8 text-transparent bg-gradient-to-r from-[#7062FF] to-[#362F7B] bg-clip-text leading-tight md:leading-[66px]">
         Mint your NFT on <span className="text-[#362F7B]">Sui with MILO</span>
       </h1>
+
       <div className="w-full max-w-xl space-y-6 bg-white rounded-2xl p-6 shadow-lg">
         <div className="border border-[#362F7B]/20 rounded-2xl p-6 bg-[#F9F9FF]">
           <label className="block text-[#6C55F5] font-medium mb-2 text-[17.7px]">
@@ -79,6 +94,7 @@ const Mint: React.FC = () => {
             </label>
           </div>
         </div>
+
         <div className="border border-[#362F7B]/20 rounded-2xl p-6 bg-[#F9F9FF] space-y-4">
           <label className="block text-[#6C55F5] font-medium mb-2 text-[17.7px]">
             Add metadata
@@ -87,36 +103,30 @@ const Mint: React.FC = () => {
             type="text"
             placeholder="Title"
             value={title}
-            onChange={(e) => {
-              setTitle(e.target.value);
-              handleMetadataChange();
-            }}
-            className="w-full border border-[#362F7B]/20 rounded-lg p-3 focus:outline-none focus:ring-2 focus:ring-[#6C55F5] text-[#6C55F5] placeholder-[#6C55F5]/50"
+            onChange={(e) => setTitle(e.target.value)}
+            className="w-full border border-[#362F7B]/20 rounded-lg p-3 focus:outline-none focus:ring-2 focus:ring-[#6C55F5] text-[#6C55F5]"
           />
           <textarea
             placeholder="Description"
             value={description}
-            onChange={(e) => {
-              setDescription(e.target.value);
-              handleMetadataChange();
-            }}
-            className="w-full border border-[#362F7B]/20 rounded-lg p-3 h-24 resize-none focus:outline-none focus:ring-2 focus:ring-[#6C55F5] text-[#6C55F5] placeholder-[#6C55F5]/50"
+            onChange={(e) => setDescription(e.target.value)}
+            className="w-full border border-[#362F7B]/20 rounded-lg p-3 h-24 resize-none focus:outline-none focus:ring-2 focus:ring-[#6C55F5] text-[#6C55F5]"
           />
-          
         </div>
+
         <div className="flex gap-4">
           <input
             type="text"
-            placeholder="Creator address (auto-filled)"
             value={currentAccount?.address || ""}
             readOnly
-            className="w-full border border-[#362F7B]/20 rounded-lg p-3 focus:outline-none focus:ring-2 focus:ring-[#6C55F5] text-[#6C55F5] placeholder-[#6C55F5]/50"
+            className="w-full border border-[#362F7B]/20 rounded-lg p-3 text-[#6C55F5]"
           />
         </div>
+
         <button
           onClick={handleMint}
           className="w-full bg-[#6C55F5] text-white py-3 rounded-full font-semibold text-lg hover:bg-[#362F7B] transition-colors disabled:opacity-50"
-          disabled={!file || !title || !currentAccount?.address}
+          disabled={!file || !title || !description || !currentAccount?.address}
         >
           Mint
         </button>

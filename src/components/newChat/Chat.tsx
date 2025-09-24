@@ -176,12 +176,10 @@ const ChatHome: React.FC = () => {
 
   return (
   <div className="flex flex-col w-full items-center min-h-screen bg-[#ffffff] text-gray-600">
-    {/* Header */}
     <div className="bg-white w-full font-sans text-milo-text relative">
       <ChatHeader addContact={addContact} contacts={contacts} />
     </div>
 
-    {/* Conditional Screens */}
     {steps === "send" && (
       <>
         {showSendInterface && (
@@ -205,7 +203,6 @@ const ChatHome: React.FC = () => {
           />
         )}
 
-        {/* Send Chat */}
         <div className="w-full max-w-[700px] px-4 mb-4 space-y-4">
           {messages.map((msg, index) => (
             <div
@@ -233,7 +230,6 @@ const ChatHome: React.FC = () => {
     {steps === "swap" && <Swap />}
     {steps === "mint" && <Mint />}
 
-    {/* Bottom Input Bar - visible for all steps */}
     <div className="bg-[#ffffff] gap-3 mb-4 rounded-2xl px-4 py-3 w-[90%] md:w-[700px] shadow-lg">
       <div className="flex items-center gap-3">
         <input
@@ -252,7 +248,6 @@ const ChatHome: React.FC = () => {
         </button>
       </div>
 
-      {/* Action Buttons */}
       <div className="flex justify-between mt-8 items-center gap-2">
         <div className="flex items-center gap-2 text-xs">
           <button
