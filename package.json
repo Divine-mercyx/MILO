@@ -12,6 +12,7 @@
     "test:watch": "vitest"
   },
   "dependencies": {
+    "@google/generative-ai": "^0.24.1",
     "@mysten/dapp-kit": "^0.18.0",
     "@mysten/sui": "^1.38.0",
     "@mysten/sui.js": "^0.54.1",
@@ -19,10 +20,13 @@
     "@types/dom-speech-recognition": "^0.0.6",
     "dotenv": "^17.2.2",
     "lucide-react": "^0.544.0",
+    "mic-recorder-to-mp3": "^2.2.2",
     "microsoft-cognitiveservices-speech-sdk": "^1.46.0",
     "react": "^19.1.1",
     "react-dom": "^19.1.1",
-    "react-speech-recognition": "^4.0.1"
+    "react-speech-recognition": "^4.0.1",
+    "recordrtc": "^5.6.2",
+    "whisper-live": "^0.2.1"
   },
   "devDependencies": {
     "@eslint/js": "^9.33.0",
