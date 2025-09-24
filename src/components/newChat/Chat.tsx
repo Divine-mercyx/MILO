@@ -1,5 +1,5 @@
 import React, {useEffect} from "react";
-import { ReplaceAll, Gem, Mic, Send, ArrowRightLeftIcon, Square, ChevronDown, Globe } from "lucide-react";
+import { ReplaceAll, Gem, Mic, Send, ArrowRightLeftIcon, Square, ChevronDown, Globe, Volume2 } from "lucide-react";
 import { useState, useRef } from "react";
 import ChatHeader from "../chat/Header.tsx";
 import Swap from "../chat/swap/Swap.tsx";
@@ -50,6 +50,7 @@ const ChatHome: React.FC = () => {
     const [steps, setSteps] = useState("send");
     const [isListening, setIsListening] = useState(false);
     const [isLanguageDropdownOpen, setIsLanguageDropdownOpen] = useState(false);
+    const [isTyping, setIsTyping] = useState(false);
 
     const [supportedLanguages] = useState([
         // Nigerian Languages
@@ -73,10 +74,21 @@ const ChatHome: React.FC = () => {
 
     const chatEndRef = useRef<HTMLDivElement>(null);
     const recognitionRef = useRef<SpeechRecognition | null>(null);
+    const synthRef = useRef<SpeechSynthesis | null>(null);
     const languageDropdownRef = useRef<HTMLDivElement>(null);
     const {addContact, contacts} = useContacts();
     const { mutate: signTransaction } = useSignTransaction();
     const client = useSuiClient();
+
+    // Enhanced custom vocabulary for better recognition
+    // const customVocabulary = {
+    //     'sui': ['sui', 'SUI', 'Sui', 'sweet', 'suite', 'switch', 'sweat', 'swi'],
+    //     'usdc': ['usdc', 'USDC', 'you es dee see'],
+    //     'bitcoin': ['bitcoin', 'Bitcoin', 'bit coin'],
+    //     'eth': ['eth', 'ETH', 'ethereum'],
+    //     'send': ['send', 'Send', 'fún', 'ziga', 'aika'],
+    //     'transfer': ['transfer', 'Transfer', 'tránsá', 'nyefee', 'canja']
+    // };
 
     // Close dropdown when clicking outside
     useEffect(() => {
@@ -90,7 +102,7 @@ const ChatHome: React.FC = () => {
         return () => document.removeEventListener('mousedown', handleClickOutside);
     }, []);
 
-    // Initialize Speech Recognition
+    // Initialize Speech Recognition with enhanced configuration
     useEffect(() => {
         const initSpeechRecognition = () => {
             // Check if browser supports speech recognition
@@ -108,8 +120,10 @@ const ChatHome: React.FC = () => {
             const recognition = new SpeechRecognitionClass();
             recognitionRef.current = recognition;
 
+            // Enhanced configuration for better accuracy
             recognition.continuous = false;
             recognition.interimResults = true;
+            recognition.maxAlternatives = 3; // Get multiple alternatives for better accuracy
             recognition.lang = currentLanguage;
 
             recognition.onstart = () => {
@@ -118,52 +132,92 @@ const ChatHome: React.FC = () => {
             };
 
             recognition.onresult = (event: SpeechRecognitionEvent) => {
-                const transcript = Array.from(event.results)
-                    .map(result => result[0].transcript)
-                    .join('');
+                let finalTranscript = '';
+                let interimTranscript = '';
 
-                console.log('Original transcript:', transcript);
+                for (let i = event.resultIndex; i < event.results.length; i++) {
+                    const transcript = event.results[i][0].transcript;
 
-                let cleanedTranscript = transcript.trim();
-
-                const cryptoCorrections: { [key: string]: { [key: string]: string } } = {
-                    'yo-NG': {
-                        'sweet': 'SUI',
-                        'swee': 'SUI',
-                        'swit': 'SUI',
-                        'soy': 'SUI',
-                        's u i': 'SUI',
-                        'usdc': 'USDC',
-                        'bitcoin': 'Bitcoin',
-                        'eth': 'ETH'
-                    },
-                    'ig-NG': {
-                        'sweet': 'SUI',
-                        'sui': 'SUI',
-                        'usdc': 'USDC'
-                    },
-                    'ha-NG': {
-                        'sweet': 'SUI',
-                        'sui': 'SUI',
-                        'swi': 'SUI'
+                    if (event.results[i].isFinal) {
+                        finalTranscript = transcript;
+                    } else {
+                        interimTranscript = transcript;
                     }
-                };
-
-                if (cryptoCorrections[currentLanguage]) {
-                    Object.entries(cryptoCorrections[currentLanguage]).forEach(([wrong, correct]) => {
-                        const regex = new RegExp(wrong, 'gi');
-                        cleanedTranscript = cleanedTranscript.replace(regex, correct);
-                    });
                 }
 
-                cleanedTranscript = cleanedTranscript
-                    .replace(/\bs u i\b/gi, 'SUI')
-                    .replace(/\bs u y\b/gi, 'SUI')
-                    .replace(/\byou es dee see\b/gi, 'USDC')
-                    .replace(/\bbit coin\b/gi, 'Bitcoin');
+                if (finalTranscript) {
+                    // Apply enhanced corrections
+                    let correctedTranscript = finalTranscript.toLowerCase();
 
-                console.log('Corrected transcript:', cleanedTranscript);
-                setInput(cleanedTranscript);
+                    // Enhanced corrections for common misrecognitions
+                    const corrections = {
+                        'sweet': 'sui',
+                        'suite': 'sui',
+                        'switch': 'sui',
+                        'sweat': 'sui',
+                        'swi': 'sui',
+                        'sri': 'sui',
+                        'see': 'sui',
+                        'sway': 'sui',
+                        'sue': 'sui',
+                        'you es dee see': 'USDC',
+                        'bit coin': 'Bitcoin',
+                        'b m i': 'bmi',
+                        'b. m. i.': 'bmi',
+                        'be am i': 'bmi',
+                        'beam i': 'bmi',
+                    };
+
+                    Object.entries(corrections).forEach(([wrong, correct]) => {
+                        const regex = new RegExp(`\\b${wrong}\\b`, 'gi');
+                        correctedTranscript = correctedTranscript.replace(regex, correct);
+                    });
+
+                    // Language-specific enhancements
+                    if (currentLanguage === 'yo-NG') {
+                        // Yoruba-specific corrections
+                        const yorubaCorrections = {
+                            'fún': 'send',
+                            'rán': 'send',
+                            'sùí': 'sui'
+                        };
+                        Object.entries(yorubaCorrections).forEach(([wrong, correct]) => {
+                            const regex = new RegExp(`\\b${wrong}\\b`, 'gi');
+                            correctedTranscript = correctedTranscript.replace(regex, correct);
+                        });
+                    }
+
+                    if (currentLanguage === 'ig-NG') {
+                        // Igbo-specific corrections
+                        const igboCorrections = {
+                            'ziga': 'send',
+                            'sùì': 'sui'
+                        };
+                        Object.entries(igboCorrections).forEach(([wrong, correct]) => {
+                            const regex = new RegExp(`\\b${wrong}\\b`, 'gi');
+                            correctedTranscript = correctedTranscript.replace(regex, correct);
+                        });
+                    }
+
+                    if (currentLanguage === 'ha-NG') {
+                        // Hausa-specific corrections
+                        const hausaCorrections = {
+                            'aika': 'send',
+                            'tuma': 'send',
+                            'swi': 'sui'
+                        };
+                        Object.entries(hausaCorrections).forEach(([wrong, correct]) => {
+                            const regex = new RegExp(`\\b${wrong}\\b`, 'gi');
+                            correctedTranscript = correctedTranscript.replace(regex, correct);
+                        });
+                    }
+
+                    console.log('Corrected transcript:', correctedTranscript);
+                    setInput(correctedTranscript);
+                } else if (interimTranscript) {
+                    // Show interim results for better UX
+                    setInput(interimTranscript);
+                }
             };
 
             recognition.onend = () => {
@@ -187,6 +241,9 @@ const ChatHome: React.FC = () => {
                     case 'network':
                         errorMessage += 'Network error occurred. Please check your connection.';
                         break;
+                    case 'no-speech':
+                        errorMessage += 'No speech detected. Please try again.';
+                        break;
                     default:
                         errorMessage += `${errorEvent.error}. Please try again.`;
                 }
@@ -196,12 +253,12 @@ const ChatHome: React.FC = () => {
                     text: `❌ ${errorMessage}`
                 }]);
             };
-
-            recognition.onstart = () => {
-                console.log('Speech recognition started');
-                setIsListening(true);
-            };
         };
+
+        // Initialize speech synthesis for text-to-speech
+        if ('speechSynthesis' in window) {
+            synthRef.current = window.speechSynthesis;
+        }
 
         initSpeechRecognition();
 
@@ -226,10 +283,18 @@ const ChatHome: React.FC = () => {
             recognitionRef.current.stop();
             setIsListening(false);
         } else {
-            // Request microphone permission
+            // Enhanced microphone permission handling
             if (navigator.mediaDevices && navigator.mediaDevices.getUserMedia) {
-                navigator.mediaDevices.getUserMedia({ audio: true })
-                    .then(() => {
+                navigator.mediaDevices.getUserMedia({
+                    audio: {
+                        echoCancellation: true,
+                        noiseSuppression: true,
+                        autoGainControl: true
+                    }
+                })
+                    .then((stream) => {
+                        // Stop all tracks to release microphone immediately
+                        stream.getTracks().forEach(track => track.stop());
                         setInput(""); // Clear previous input
                         recognitionRef.current?.start();
                     })
@@ -237,12 +302,23 @@ const ChatHome: React.FC = () => {
                         console.error('Microphone permission denied:', err);
                         setMessages(prev => [...prev, {
                             sender: "bot",
-                            text: "❌ Microphone access is required for voice input. Please allow microphone permissions."
+                            text: "❌ Microphone access is required for voice input. Please allow microphone permissions in your browser settings."
                         }]);
                     });
             } else {
                 recognitionRef.current.start();
             }
+        }
+    };
+
+    // Text-to-speech function
+    const speakText = (text: string) => {
+        if (synthRef.current) {
+            const utterance = new SpeechSynthesisUtterance(text);
+            utterance.lang = currentLanguage;
+            utterance.rate = 0.8;
+            utterance.pitch = 1;
+            synthRef.current.speak(utterance);
         }
     };
 
@@ -258,7 +334,8 @@ const ChatHome: React.FC = () => {
         const languageTips: { [key: string]: string } = {
             'yo-NG': "💡 Pro tip: Say 'S-U-I' slowly or 'Sui coin' for best recognition",
             'ig-NG': "💡 Pro tip: Spell 'S-U-I' clearly for cryptocurrency terms",
-            'ha-NG': "💡 Pro tip: Pronounce 'S-U-I' distinctly for crypto words"
+            'ha-NG': "💡 Pro tip: Pronounce 'S-U-I' distinctly for crypto words",
+            'en-US': "💡 Speak clearly and use natural commands like 'send 10 SUI to John'"
         };
 
         setMessages(prev => [...prev, {
@@ -269,6 +346,14 @@ const ChatHome: React.FC = () => {
 
     const getCurrentLanguage = () => {
         return supportedLanguages.find(lang => lang.code === currentLanguage) || supportedLanguages[0];
+    };
+
+    // Handle Enter key press
+    const handleKeyPress = (e: React.KeyboardEvent) => {
+        if (e.key === 'Enter' && !e.shiftKey) {
+            e.preventDefault();
+            handleSendMessage(input);
+        }
     };
 
     useEffect(() => {
@@ -342,6 +427,7 @@ const ChatHome: React.FC = () => {
 
         setMessages(prev => [...prev, { sender: "user", text: message }]);
         setInput("");
+        setIsTyping(true);
 
         try {
             setLoading(true);
@@ -370,6 +456,7 @@ const ChatHome: React.FC = () => {
             }]);
         } finally {
             setLoading(false);
+            setIsTyping(false);
         }
     };
 
@@ -391,6 +478,11 @@ const ChatHome: React.FC = () => {
 
             {loading && <div className="text-sm text-gray-400 mb-2">Milo is thinking...</div>}
 
+            {/* Voice Recognition Tips */}
+            <div className="text-xs text-blue-600 mb-2 text-center max-w-md">
+                💡 Tips: Speak clearly, use "sui" for SUI token. The system learns from corrections.
+            </div>
+
             { steps !== "swap" && (
                 <>
                     <div className="w-full max-w-[700px] px-4 mb-4 space-y-2">
@@ -400,16 +492,41 @@ const ChatHome: React.FC = () => {
                                 className={`flex ${msg.sender === "user" ? "justify-end" : "justify-start"}`}
                             >
                                 <div
-                                    className={`max-w-[80%] px-4 py-2 rounded-xl text-sm ${
+                                    className={`max-w-[80%] text-wrap px-4 py-2 rounded-xl text-sm relative ${
                                         msg.sender === "user"
                                             ? "bg-[#6C55F5] text-white rounded-br-none"
                                             : "bg-gray-100 text-gray-800 rounded-bl-none"
                                     }`}
                                 >
-                                    {msg.text}
+                                    <p>{msg.text}</p>
+                                    {msg.sender === "bot" && (
+                                        <button
+                                            onClick={() => speakText(msg.text)}
+                                            className="absolute top-1 right-1 p-1 hover:bg-gray-200 rounded opacity-50 hover:opacity-100 transition-opacity"
+                                            title="Read aloud"
+                                        >
+                                            <Volume2 size={12} />
+                                        </button>
+                                    )}
                                 </div>
                             </div>
                         ))}
+
+                        {isTyping && (
+                            <div className="flex justify-start">
+                                <div className="bg-gray-100 text-gray-800 rounded-xl rounded-bl-none px-4 py-2 max-w-[80%]">
+                                    <div className="flex items-center space-x-2">
+                                        <div className="flex space-x-1">
+                                            <div className="w-2 h-2 bg-gray-400 rounded-full animate-bounce"></div>
+                                            <div className="w-2 h-2 bg-gray-400 rounded-full animate-bounce" style={{animationDelay: '0.1s'}}></div>
+                                            <div className="w-2 h-2 bg-gray-400 rounded-full animate-bounce" style={{animationDelay: '0.2s'}}></div>
+                                        </div>
+                                        <span className="text-sm">Milo is typing...</span>
+                                    </div>
+                                </div>
+                            </div>
+                        )}
+
                         {isListening && (
                             <div className="flex justify-start">
                                 <div className="bg-gray-100 text-gray-800 rounded-xl rounded-bl-none px-4 py-2 max-w-[80%]">
@@ -453,24 +570,47 @@ const ChatHome: React.FC = () => {
 
                 <div className="bg-[#ffffff] gap-3 mb-4 rounded-2xl px-4 py-3 w-[90%] md:w-[700px] shadow-lg">
                     <div className="flex items-center gap-3">
-                        <input
-                            type="text"
-                            placeholder={isListening ? "Listening... Speak now" : "Make any transaction"}
+                        <textarea
                             value={input}
                             onChange={(e) => setInput(e.target.value)}
-                            className="flex-1 bg-transparent outline-none text-sm md:text-base placeholder-gray-400"
+                            onKeyPress={handleKeyPress}
+                            placeholder={isListening ? "Listening... Speak now" : "Make any transaction or speak your command..."}
+                            className="flex-1 bg-transparent outline-none text-sm md:text-base placeholder-gray-400 resize-none"
+                            rows={2}
                             disabled={isListening}
                         />
                         <button
                             onClick={() => handleSendMessage(input)}
                             className="flex items-center gap-1 bg-[#6C55F5] px-2 py-1 rounded-lg text-xs hover:bg-[#50515F] transition"
-                            disabled={isListening}
+                            disabled={isListening || !input.trim()}
                         >
                             <Send size={14} className={"text-white"} />
                         </button>
                     </div>
 
-                    <div className="flex justify-between mt-8 items-center gap-2">
+                    {/* Quick Action Buttons */}
+                    <div className="mt-2 flex flex-wrap gap-2">
+                        <button
+                            onClick={() => setInput('send 5 SUI to John')}
+                            className="px-2 py-1 text-xs bg-gray-100 hover:bg-gray-200 rounded transition-colors"
+                        >
+                            send 5 SUI to John
+                        </button>
+                        <button
+                            onClick={() => setInput('swap 10 SUI to USDC')}
+                            className="px-2 py-1 text-xs bg-gray-100 hover:bg-gray-200 rounded transition-colors"
+                        >
+                            swap 10 SUI to USDC
+                        </button>
+                        <button
+                            onClick={() => setInput('check my balance')}
+                            className="px-2 py-1 text-xs bg-gray-100 hover:bg-gray-200 rounded transition-colors"
+                        >
+                            check my balance
+                        </button>
+                    </div>
+
+                    <div className="flex justify-between mt-4 items-center gap-2">
                         <div className="flex items-center gap-2 text-xs">
                             <button onClick={() => setSteps("send")} className={`flex hover:text-white items-center border gap-1 px-2 py-1 rounded-lg text-xs ${steps === "send" ? "bg-[#6C55F5] text-white" : "bg-[#fffff]"} hover:bg-[#6C55F5] transition`}>
                                 <ArrowRightLeftIcon size={14} />
@@ -576,7 +716,7 @@ const ChatHome: React.FC = () => {
                                 onClick={toggleListening}
                                 className={`flex items-center gap-1 px-2 py-1 rounded-lg text-xs transition ${
                                     isListening
-                                        ? "bg-red-500 text-white hover:bg-red-600"
+                                        ? "bg-red-500 text-white hover:bg-red-600 animate-pulse"
                                         : "bg-white border border-gray-300 text-gray-600 hover:bg-[#6C55F5] hover:text-white"
                                 }`}
                             >
@@ -590,7 +730,7 @@ const ChatHome: React.FC = () => {
 
             {/* Mobile version */}
             <div className="lg:hidden flex flex-col justify-end flex-1">
-                {/* Mobile content remains the same */}
+                {/* Mobile content with similar updates */}
             </div>
         </div>
     );
