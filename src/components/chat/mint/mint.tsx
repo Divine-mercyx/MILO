@@ -3,6 +3,7 @@ import { Upload } from "lucide-react";
 import { useCurrentAccount, useSignAndExecuteTransaction } from "@mysten/dapp-kit";
 import { NFTStorage, File } from "nft.storage";
 import { buildTransaction, type Intent } from "../../../lib/suiTxBuilder";
+import toast from "react-hot-toast";
 
 const Mint: React.FC = () => {
   const [file, setFile] = useState<File | null>(null);
@@ -31,7 +32,7 @@ const Mint: React.FC = () => {
 
   const handleMint = async () => {
     if (!file || !title || !description || !currentAccount?.address ) {
-      alert("Please complete all required fields and upload a file.");
+      toast("Please complete all required fields and upload a file.");
       return;
     }
 
@@ -42,9 +43,8 @@ const Mint: React.FC = () => {
     // //   assetUrl: fileUrl,
     // });
 
+    const id = toast.loading("⏳ Minting NFT...")
     try {
-      alert("Minting NFT...");
-
       const intent: Intent = {
         action: "mint",
         name: title,
@@ -57,9 +57,27 @@ const Mint: React.FC = () => {
         transaction: txb as any,
       });
 
-      alert(`✅ NFT Minted! Digest: ${result.digest}`);
+      toast.success(
+      <div className="flex flex-col gap-2">
+        <p>✅ NFT Minted!</p>
+        <button
+          onClick={() =>
+            window.open(
+              `https://suiexplorer.com/txblock/${result.digest}?network=testnet`,
+              "_blank"
+            )
+          }
+          className="text-sm text-blue-500 underline"
+        >
+          View on Explorer
+        </button>
+      </div>,
+      { duration: 5000 }
+    );
+
     } catch (err: any) {
-      alert(`
+      toast.dismiss(id);
+      toast.error(`
         Mint failed: ${err.message}`);
     }
   };
