@@ -81,14 +81,14 @@ const ChatHome: React.FC = () => {
     const client = useSuiClient();
 
     // Enhanced custom vocabulary for better recognition
-    const customVocabulary = {
-        'sui': ['sui', 'SUI', 'Sui', 'sweet', 'suite', 'switch', 'sweat', 'swi'],
-        'usdc': ['usdc', 'USDC', 'you es dee see'],
-        'bitcoin': ['bitcoin', 'Bitcoin', 'bit coin'],
-        'eth': ['eth', 'ETH', 'ethereum'],
-        'send': ['send', 'Send', 'fún', 'ziga', 'aika'],
-        'transfer': ['transfer', 'Transfer', 'tránsá', 'nyefee', 'canja']
-    };
+    // const customVocabulary = {
+    //     'sui': ['sui', 'SUI', 'Sui', 'sweet', 'suite', 'switch', 'sweat', 'swi'],
+    //     'usdc': ['usdc', 'USDC', 'you es dee see'],
+    //     'bitcoin': ['bitcoin', 'Bitcoin', 'bit coin'],
+    //     'eth': ['eth', 'ETH', 'ethereum'],
+    //     'send': ['send', 'Send', 'fún', 'ziga', 'aika'],
+    //     'transfer': ['transfer', 'Transfer', 'tránsá', 'nyefee', 'canja']
+    // };
 
     // Close dropdown when clicking outside
     useEffect(() => {
