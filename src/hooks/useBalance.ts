@@ -13,7 +13,7 @@ export function useBalance() {
             owner: currentAccount.address,
         });
         return Number(balance.totalBalance) / 1_000_000_000;
-    }, [suiClient, currentAccount?.Aaddress]);
+    }, [suiClient, currentAccount?.address]);
 
     return { getBalance };
 }
