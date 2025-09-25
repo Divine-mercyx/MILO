@@ -408,7 +408,7 @@ const ChatHome: React.FC = () => {
                         transactionData: {
                             digest: digest,
                             status: 'success',
-                            gasUsed: effects.gasUsed?.computationCost?.toString() || 'N/A',
+                            gasUsed: effects?.gasUsed?.computationCost?.toString() || 'N/A',
                             eventsCount: events?.length || 0,
                             timestamp: new Date()
                         }
