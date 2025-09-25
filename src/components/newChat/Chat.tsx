@@ -1,5 +1,5 @@
 import React, {useEffect} from "react";
-import { ReplaceAll, Gem, Mic, Send, ArrowRightLeftIcon, Square, ChevronDown, Globe, Volume2 } from "lucide-react";
+import { ReplaceAll, Gem, Mic, Send, ArrowRightLeftIcon, Square, ChevronDown, Globe, Volume2, XCircle, CheckCircle, Clock, ExternalLink } from "lucide-react";
 import { useState, useRef } from "react";
 import ChatHeader from "../chat/Header.tsx";
 import Swap from "../chat/swap/Swap.tsx";
@@ -10,9 +10,17 @@ import {buildTransaction} from "../../lib/suiTxBuilder.ts";
 type Message = {
     sender: "user" | "bot";
     text: string;
+    type?: 'text' | 'transaction' | 'error';
+    transactionData?: {
+        digest?: string;
+        status?: 'pending' | 'success' | 'failed';
+        gasUsed?: string;
+        eventsCount?: number;
+        timestamp?: Date;
+    };
 };
 
-// Simplified and correct TypeScript interfaces
+
 interface SpeechRecognitionEvent extends Event {
     readonly results: SpeechRecognitionResultList;
     readonly resultIndex: number;
@@ -362,6 +370,20 @@ const ChatHome: React.FC = () => {
 
     const submitTransaction = async (bytes: string, signature: string) => {
         try {
+
+            setMessages((prev) => [
+                ...prev,
+                {
+                    sender: "bot",
+                    text: "⏳ Transaction submitted to network...",
+                    type: 'transaction',
+                    transactionData: {
+                        status: 'pending',
+                        timestamp: new Date()
+                    }
+                },
+            ]);
+
             const response = await client.executeTransactionBlock({
                 transactionBlock: bytes,
                 signature: signature,
@@ -371,27 +393,156 @@ const ChatHome: React.FC = () => {
                 },
             });
 
-            const digest = response.digest;
-            setMessages((prev) => [
-                ...prev,
-                {
-                    sender: "bot",
-                    text: `✅ Transaction successful! View it on the testnet explorer: https://suiexplorer.com/tx/${digest}?network=testnet`,
-                },
-            ]);
+            const { digest, effects, events } = response;
+            setMessages((prev) => {
+                const newMessages = prev.filter(msg =>
+                    !(msg.type === 'transaction' && msg.transactionData?.status === 'pending')
+                );
+
+                return [
+                    ...newMessages,
+                    {
+                        sender: "bot",
+                        text: `Transaction Successful!`,
+                        type: 'transaction',
+                        transactionData: {
+                            digest: digest,
+                            status: 'success',
+                            gasUsed: effects.gasUsed?.computationCost?.toString() || 'N/A',
+                            eventsCount: events?.length || 0,
+                            timestamp: new Date()
+                        }
+                    },
+                ];
+            });
+
         } catch (error) {
-            console.error("Failed to submit transaction:", error);
-            setMessages((prev) => [
-                ...prev,
-                {
-                    sender: "bot",
-                    text: `❌ Transaction submission failed: ${
-                        error instanceof Error ? error.message : "Unknown error"
-                    }`,
-                },
-            ]);
+            setMessages((prev) => {
+                const newMessages = prev.filter(msg =>
+                    !(msg.type === 'transaction' && msg.transactionData?.status === 'pending')
+                );
+
+                return [
+                    ...newMessages,
+                    {
+                        sender: "bot",
+                        text: `❌ Transaction Failed`,
+                        type: 'error',
+                        transactionData: {
+                            status: 'failed',
+                            timestamp: new Date()
+                        }
+                    },
+                ];
+            });
         }
     };
+
+    const TransactionMessage = ({ message }: { message: Message }) => {
+        if (!message.transactionData) return null;
+
+        const { digest, status, gasUsed, eventsCount, timestamp } = message.transactionData;
+        const explorerUrl = `https://testnet.suivision.xyz/txblock/${digest}`;
+
+        return (
+            <div className={`max-w-[80%] px-4 py-3 rounded-xl text-sm border-l-4 ${
+                status === 'success'
+                    ? 'bg-[#6C55F5]/10 border-[#6C55F5] text-[#6C55F5]'
+                    : status === 'failed'
+                        ? 'bg-red-50 border-red-400 text-red-800'
+                        : 'bg-blue-50 border-blue-400 text-blue-800'
+            }`}>
+                <div className="flex items-start gap-3">
+                    <div className="flex-shrink-0 mt-0.5">
+                        {status === 'success' ? (
+                            <CheckCircle size={20} className="text-[#6C55F5]" />
+                        ) : status === 'failed' ? (
+                            <XCircle size={20} className="text-red-500" />
+                        ) : (
+                            <Clock size={20} className="text-blue-500" />
+                        )}
+                    </div>
+
+                    <div className="flex-1 min-w-0">
+                        <div className="flex items-center gap-2 mb-2">
+                            <span className="font-semibold">{message.text}</span>
+                        </div>
+
+                        {digest && (
+                            <div className="space-y-1 text-xs">
+                                <div className="flex items-center gap-2">
+                                    <span className="font-medium">Digest:</span>
+                                    <code className="bg-black/10 px-1.5 py-0.5 rounded text-xs font-mono">
+                                        {digest.slice(0, 12)}...{digest.slice(-8)}
+                                    </code>
+                                </div>
+
+                                <div className="flex flex-wrap gap-4">
+                                    {gasUsed && gasUsed !== 'N/A' && (
+                                        <div className="flex items-center gap-1">
+                                            <span className="font-medium">Gas:</span>
+                                            <span>{gasUsed}</span>
+                                        </div>
+                                    )}
+
+                                    {eventsCount !== undefined && (
+                                        <div className="flex items-center gap-1">
+                                            <span className="font-medium">Events:</span>
+                                            <span>{eventsCount}</span>
+                                        </div>
+                                    )}
+
+                                    {timestamp && (
+                                        <div className="flex items-center gap-1">
+                                            <span className="font-medium">Time:</span>
+                                            <span>{timestamp.toLocaleTimeString()}</span>
+                                        </div>
+                                    )}
+                                </div>
+
+                                {digest && (
+                                    <div className="mt-2 pt-2 border-t border-current/20">
+                                        <a
+                                            href={explorerUrl}
+                                            target="_blank"
+                                            rel="noopener noreferrer"
+                                            className="inline-flex items-center gap-1 text-current hover:underline font-medium"
+                                        >
+                                            <ExternalLink size={12} />
+                                            View on Explorer
+                                        </a>
+                                    </div>
+                                )}
+                            </div>
+                        )}
+                    </div>
+                </div>
+            </div>
+        );
+    };
+
+
+    const RegularMessage = ({ message }: { message: Message }) => {
+        return (
+            <div className={`max-w-[80%] px-4 py-2 rounded-xl text-sm relative ${
+                message.sender === "user"
+                    ? "bg-[#6C55F5] text-white rounded-br-none"
+                    : "bg-gray-100 text-gray-800 rounded-bl-none"
+            }`}>
+                <p style={{ whiteSpace: "pre-wrap" }}>{message.text}</p>
+                {message.sender === "bot" && (
+                    <button
+                        onClick={() => speakText(message.text)}
+                        className="absolute top-1 right-1 p-1 hover:bg-gray-200 rounded opacity-50 hover:opacity-100 transition-opacity"
+                        title="Read aloud"
+                    >
+                        <Volume2 size={12} />
+                    </button>
+                )}
+            </div>
+        );
+    };
+
 
     const executeTransfer = async (intent: any) => {
         try {
@@ -491,24 +642,11 @@ const ChatHome: React.FC = () => {
                                 key={index}
                                 className={`flex ${msg.sender === "user" ? "justify-end" : "justify-start"}`}
                             >
-                                <div
-                                    className={`max-w-[80%] text-wrap px-4 py-2 rounded-xl text-sm relative ${
-                                        msg.sender === "user"
-                                            ? "bg-[#6C55F5] text-white rounded-br-none"
-                                            : "bg-gray-100 text-gray-800 rounded-bl-none"
-                                    }`}
-                                >
-                                    <p>{msg.text}</p>
-                                    {msg.sender === "bot" && (
-                                        <button
-                                            onClick={() => speakText(msg.text)}
-                                            className="absolute top-1 right-1 p-1 hover:bg-gray-200 rounded opacity-50 hover:opacity-100 transition-opacity"
-                                            title="Read aloud"
-                                        >
-                                            <Volume2 size={12} />
-                                        </button>
-                                    )}
-                                </div>
+                                {msg.type === 'transaction' || msg.type === 'error' ? (
+                                    <TransactionMessage message={msg} />
+                                ) : (
+                                    <RegularMessage message={msg} />
+                                )}
                             </div>
                         ))}
 
