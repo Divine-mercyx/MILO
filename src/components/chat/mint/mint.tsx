@@ -1,15 +1,17 @@
 import React, { useState } from "react";
 import { Upload } from "lucide-react";
 import { useCurrentAccount, useSignAndExecuteTransaction } from "@mysten/dapp-kit";
-import { NFTStorage, File } from "nft.storage";
 import { buildTransaction, type Intent } from "../../../lib/suiTxBuilder";
 import toast from "react-hot-toast";
+import { useWalrusUpload, getWalrusPreviewUrl } from "../../../hooks/useWalrusUpload";
 
 const Mint: React.FC = () => {
   const [file, setFile] = useState<File | null>(null);
-  const [title, setTitle] = useState("");
+  const [name, setName] = useState("");
   const [description, setDescription] = useState("");
-  const [fileUrl, setFileUrl] = useState("");
+  const [previewUrl, setPreviewUrl] = useState("");
+  const [blobId, setBlobId] = useState("");
+  const { uploadToWalrus, uploading } = useWalrusUpload();
   const currentAccount = useCurrentAccount();
   const { mutateAsync: signAndExecuteTransaction } = useSignAndExecuteTransaction();
 
@@ -24,39 +26,48 @@ const Mint: React.FC = () => {
   //   }
   // };
 
-  const handleFileChange = (e: React.ChangeEvent<HTMLInputElement>) => {
+  const handleFileChange = async (e: React.ChangeEvent<HTMLInputElement>) => {
     if (e.target.files?.length) {
-      setFile(e.target.files[0]);
+      const uploadedFile = e.target.files[0];
+      setFile(uploadedFile);
+
+      toast.loading("Uploading data...");
+      const result = await uploadToWalrus(uploadedFile);
+      toast.dismiss();
+
+      if (result) {
+        setBlobId(result.blobId);
+        setPreviewUrl(result.previewUrl);
+        toast.success("Asset uploaded successfully!");
+      } else {
+        toast.error("Upload failed");
+      }
     }
-  }
+  };
 
   const handleMint = async () => {
-    if (!file || !title || !description || !currentAccount?.address ) {
-      toast("Please complete all required fields and upload a file.");
-      return;
-    }
+    if (!file) return toast.error("Please upload a file");
+    if (!name) return toast.error("Please enter a title");
+    if (!description) return toast.error("Please add a description");
+    if (!blobId) return toast.error("Upload to data before minting");
 
-    // const metadata = JSON.stringify({
-    //   title,
-    //   description,
-    //   creator: currentAccount.address,
-    // //   assetUrl: fileUrl,
-    // });
-
-    const id = toast.loading("⏳ Minting NFT...")
     try {
+      toast.loading("Minting NFT...")
       const intent: Intent = {
         action: "mint",
-        name: title,
+        name,
         description,
-        // assetUrl: fileUrl,
+        blobId,
       };
+
+      console.log("Minting with:", { name, description, blobId });
 
       const txb = await buildTransaction(intent);
       const result = await signAndExecuteTransaction({
         transaction: txb as any,
       });
-
+      
+      toast.dismiss();
       toast.success(
       <div className="flex flex-col gap-2">
         <p>✅ NFT Minted!</p>
@@ -75,13 +86,18 @@ const Mint: React.FC = () => {
       { duration: 5000 }
     );
 
+    setFile(null);
+    setName("");
+    setDescription("");
+    setBlobId("");
+    setPreviewUrl("");
+    
     } catch (err: any) {
-      toast.dismiss(id);
+      
       toast.error(`
         Mint failed: ${err.message}`);
     }
   };
-
   return (
     <div className="flex flex-col items-center justify-center py-10 px-4 min-h-screen bg-gray-50">
       <h1 className="text-3xl md:text-[66.55px] font-semibold text-center mb-8 text-transparent bg-gradient-to-r from-[#7062FF] to-[#362F7B] bg-clip-text leading-tight md:leading-[66px]">
@@ -105,12 +121,29 @@ const Mint: React.FC = () => {
               htmlFor="assetUpload"
               className="flex flex-col items-center cursor-pointer text-[#6C55F5] text-center"
             >
-              <Upload size={32} className="text-[#6C55F5]" />
+              <Upload size={32} strokeWidth={2} className="text-[#6C55F5]" />
               <span className="mt-2 text-[15.96px]">
                 {file ? file.name : "Click to upload image, video, or audio"}
               </span>
             </label>
           </div>
+          {previewUrl && (
+            <div className="mt-4">
+              <p className="text-sm text-gray-500">Preview:</p>
+              {file?.type.startsWith("image/") ? (
+                <img src={previewUrl} alt="Uploaded preview" className="rounded-lg mt-2 max-h-64" />
+              ) : file?.type.startsWith("video/") ? (
+                <video src={previewUrl} controls className="rounded-lg mt-2 max-h-64" />
+              ) : file?.type.startsWith("audio/") ? (
+                <audio src={previewUrl} controls className="mt-2 w-full" />
+              ) : (
+                <a href={previewUrl} target="_blank" rel="noreferrer" className="text-blue-500 underline">
+                  Open file
+                </a>
+              )}
+            </div>
+          )}
+
         </div>
 
         <div className="border border-[#362F7B]/20 rounded-2xl p-6 bg-[#F9F9FF] space-y-4">
@@ -120,8 +153,8 @@ const Mint: React.FC = () => {
           <input
             type="text"
             placeholder="Title"
-            value={title}
-            onChange={(e) => setTitle(e.target.value)}
+            value={name}
+            onChange={(e) => setName(e.target.value)}
             className="w-full border border-[#362F7B]/20 rounded-lg p-3 focus:outline-none focus:ring-2 focus:ring-[#6C55F5] text-[#6C55F5]"
           />
           <textarea
@@ -144,7 +177,7 @@ const Mint: React.FC = () => {
         <button
           onClick={handleMint}
           className="w-full bg-[#6C55F5] text-white py-3 rounded-full font-semibold text-lg hover:bg-[#362F7B] transition-colors disabled:opacity-50"
-          disabled={!file || !title || !description || !currentAccount?.address}
+          disabled={!file || !name || !description || !currentAccount?.address}
         >
           Mint
         </button>

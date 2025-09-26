@@ -13,7 +13,7 @@ export interface Intent {
   name?: string; 
   description?: string;
   target?: string;   
-  assetUrl?: string;
+  blobId?: string;
 }
 
 export async function buildTransaction(intent: Intent): Promise<Transaction> {
@@ -61,17 +61,18 @@ function buildTransferTx(
   tx.transferObjects([coin], recipient);
 }
 
-// 🔹 Mint NFT (UPDATED)
+// 🔹 Mint NFT 
 function buildMintTx(
   txb: Transaction,
-  { name = "My NFT", description = "Minted via Milo"  }: Intent
+  { name = "My NFT", description = "Minted via Milo", blobId= "" }: Intent
 ) {
+  if(!blobId)throw new Error("Asset id is required for minting");
   txb.moveCall({
-    target: "0x235af9d330fa04133b5435844910a7fad5dd5b389a7a8a3c089cf1a20001bec5::nft_module::mint",
+    target: "0xefcbc248490404305070c7de5c7c0a7dc4e4e7bcb1fc796c64a61d7c9b80a7ee::nft_module::mint",
     arguments: [
       txb.pure.string(name),
-      txb.pure.string(description)
-      // txb.pure.string(assetUrl),
+      txb.pure.string(description),
+      txb.pure.string(blobId),
     ],
   });
 }
