@@ -1,9 +1,15 @@
 import React, { useState } from "react";
 import { Upload } from "lucide-react";
-import { useCurrentAccount, useSignAndExecuteTransaction } from "@mysten/dapp-kit";
+import {
+  useCurrentAccount,
+  useSignAndExecuteTransaction,
+} from "@mysten/dapp-kit";
 import { buildTransaction, type Intent } from "../../../lib/suiTxBuilder";
 import toast from "react-hot-toast";
-import { useWalrusUpload, getWalrusPreviewUrl } from "../../../hooks/useWalrusUpload";
+import {
+  useWalrusUpload,
+  getWalrusPreviewUrl,
+} from "../../../hooks/useWalrusUpload";
 
 const Mint: React.FC = () => {
   const [file, setFile] = useState<File | null>(null);
@@ -13,7 +19,14 @@ const Mint: React.FC = () => {
   const [blobId, setBlobId] = useState("");
   const { uploadToWalrus, uploading } = useWalrusUpload();
   const currentAccount = useCurrentAccount();
-  const { mutateAsync: signAndExecuteTransaction } = useSignAndExecuteTransaction();
+  const { mutateAsync: signAndExecuteTransaction } =
+    useSignAndExecuteTransaction();
+  const [lastMinted, setLastMinted] = useState<{
+    name: string;
+    description: string;
+    previewUrl: string;
+    txDigest: string;
+  } | null>(null);
 
   // const handleFileChange = async (e: React.ChangeEvent<HTMLInputElement>) => {
   //   if (e.target.files?.length) {
@@ -52,7 +65,7 @@ const Mint: React.FC = () => {
     if (!blobId) return toast.error("Upload to data before minting");
 
     try {
-      toast.loading("Minting NFT...")
+      toast.loading("Minting NFT...");
       const intent: Intent = {
         action: "mint",
         name,
@@ -66,34 +79,41 @@ const Mint: React.FC = () => {
       const result = await signAndExecuteTransaction({
         transaction: txb as any,
       });
-      
+
       toast.dismiss();
       toast.success(
-      <div className="flex flex-col gap-2">
-        <p>✅ NFT Minted!</p>
-        <button
-          onClick={() =>
-            window.open(
-              `https://suiexplorer.com/txblock/${result.digest}?network=testnet`,
-              "_blank"
-            )
-          }
-          className="text-sm text-blue-500 underline"
-        >
-          View on Explorer
-        </button>
-      </div>,
-      { duration: 5000 }
-    );
+        <div className="flex flex-col gap-2">
+          <p>✅ NFT Minted!</p>
+          <button
+            onClick={() =>
+              window.open(
+                `https://suiexplorer.com/txblock/${result.digest}?network=testnet`,
+                "_blank"
+              )
+            }
+            className="text-sm text-blue-500 underline"
+          >
+            View on Explorer
+          </button>
+        </div>,
+        { duration: 10000 }
+      );
 
-    setFile(null);
-    setName("");
-    setDescription("");
-    setBlobId("");
-    setPreviewUrl("");
-    
+      setLastMinted({
+        name,
+        description,
+        previewUrl: getWalrusPreviewUrl(blobId),
+        txDigest: result.digest,
+      });
+
+      setTimeout(() => setLastMinted(null), 30000);
+
+      setFile(null);
+      setName("");
+      setDescription("");
+      setBlobId("");
+      setPreviewUrl("");
     } catch (err: any) {
-      
       toast.error(`
         Mint failed: ${err.message}`);
     }
@@ -131,19 +151,31 @@ const Mint: React.FC = () => {
             <div className="mt-4">
               <p className="text-sm text-gray-500">Preview:</p>
               {file?.type.startsWith("image/") ? (
-                <img src={previewUrl} alt="Uploaded preview" className="rounded-lg mt-2 max-h-64" />
+                <img
+                  src={previewUrl}
+                  alt="Uploaded preview"
+                  className="rounded-lg mt-2 max-h-64"
+                />
               ) : file?.type.startsWith("video/") ? (
-                <video src={previewUrl} controls className="rounded-lg mt-2 max-h-64" />
+                <video
+                  src={previewUrl}
+                  controls
+                  className="rounded-lg mt-2 max-h-64"
+                />
               ) : file?.type.startsWith("audio/") ? (
                 <audio src={previewUrl} controls className="mt-2 w-full" />
               ) : (
-                <a href={previewUrl} target="_blank" rel="noreferrer" className="text-blue-500 underline">
+                <a
+                  href={previewUrl}
+                  target="_blank"
+                  rel="noreferrer"
+                  className="text-blue-500 underline"
+                >
                   Open file
                 </a>
               )}
             </div>
           )}
-
         </div>
 
         <div className="border border-[#362F7B]/20 rounded-2xl p-6 bg-[#F9F9FF] space-y-4">
@@ -182,6 +214,39 @@ const Mint: React.FC = () => {
           Mint
         </button>
       </div>
+
+      {lastMinted && (
+        <div className="mt-8 w-full max-w-xl bg-white rounded-2xl p-6 shadow-lg">
+          <button
+            onClick={() => setLastMinted(null)}
+            className="absolute top-3 right-3 text-gray-400 hover:text-gray-600"
+          >
+            ✕
+          </button>
+          <h2 className="text-xl font-semibold text-[#362F7B] mb-4">
+            NFT minted successfully
+          </h2>
+          <div className="space-y-3">
+            {lastMinted.previewUrl && (
+              <img
+                src={lastMinted.previewUrl}
+                alt={lastMinted.name}
+                className="rounded-lg max-h-64"
+              />
+            )}
+            <p className="font-medium text-[#6C55F5]">{lastMinted.name}</p>
+            <p className="text-gray-600">{lastMinted.description}</p>
+            <a
+              href={`https://suiexplorer.com/txblock/${lastMinted.txDigest}?network=testnet`}
+              target="_blank"
+              rel="noreferrer"
+              className="text-blue-500 underline text-sm"
+            >
+              View on Explorer
+            </a>
+          </div>
+        </div>
+      )}
     </div>
   );
 };
