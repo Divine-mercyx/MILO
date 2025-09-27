@@ -1,7 +1,7 @@
-// lib/suiTxBuilder.ts - UPDATED FOR NEW SDK
 import { Transaction } from "@mysten/sui/transactions";
+import { SuiClient, getFullnodeUrl } from "@mysten/sui/client";
 
-export const SUPPORTED_ASSETS = ["SUI", "CETUS", "USDC", "BTC", "ETH"] as const;
+export const SUPPORTED_ASSETS = ["SUI", "CETUS", "USDC", "BTC", "ETH", "USDT"] as const;
 export type Asset = typeof SUPPORTED_ASSETS[number];
 
 export interface Intent {
@@ -9,9 +9,11 @@ export interface Intent {
   asset?: Asset;
   amount?: number;
   recipient?: string;
-  gasBudget?: number;
-  metadata?: string;
+  gasBudget?: number,
+  name?: string;
+  description?: string;
   target?: string;
+  blobId?: string;
 }
 
 export async function buildTransaction(intent: Intent): Promise<Transaction> {
@@ -34,6 +36,8 @@ export async function buildTransaction(intent: Intent): Promise<Transaction> {
     case "swap":
       buildSwapTx(tx, intent);
       break;
+    case "query-balance":
+      throw new Error("query-balance is not a transaction. Use queryBalance() instead.");
     default:
       throw new Error(`Unknown action: ${intent.action}`);
   }
@@ -42,10 +46,10 @@ export async function buildTransaction(intent: Intent): Promise<Transaction> {
 }
 
 /** --- ACTION HANDLERS --- **/
+// 🔹 Transfer SUI
 
-// 🔹 Transfer SUI (UPDATED FOR NEW SDK)
 function buildTransferTx(
-    tx: Transaction, // ← Changed from TransactionBlock to Transaction
+    tx: Transaction,
     { amount = 0, recipient }: Intent
 ) {
   if (!recipient) throw new Error("Recipient is required for transfer");
@@ -53,26 +57,27 @@ function buildTransferTx(
 
   const mistAmount = BigInt(amount * 1e9);
 
-  // NEW API: Much simpler!
   const [coin] = tx.splitCoins(tx.gas, [mistAmount]);
   tx.transferObjects([coin], recipient);
 }
 
-// 🔹 Mint NFT (UPDATED)
+// 🔹 Mint NFT
 function buildMintTx(
-    tx: Transaction,
-    { metadata = "My NFT" }: Intent
+    txb: Transaction,
+    { name = "My NFT", description = "Minted via Milo", blobId= "" }: Intent
 ) {
-  tx.moveCall({
-    target: "0xNFT_PACKAGE_ID::nft_module::mint",
+  if(!blobId)throw new Error("Asset id is required for minting");
+  txb.moveCall({
+    target: "0xefcbc248490404305070c7de5c7c0a7dc4e4e7bcb1fc796c64a61d7c9b80a7ee::nft_module::mint",
     arguments: [
-      tx.pure.string(metadata), // ← .string() for string types
-      tx.pure.string("https://example.com/nft.png"),
+      txb.pure.string(name),
+      txb.pure.string(description),
+      txb.pure.string(blobId),
     ],
   });
 }
 
-// 🔹 Stake SUI (UPDATED)
+// 🔹 Stake SUI
 function buildStakeTx(
     tx: Transaction,
     { amount = 0, recipient: validator }: Intent
@@ -82,16 +87,16 @@ function buildStakeTx(
 
   const [stakeCoin] = tx.splitCoins(tx.gas, [mistAmount]);
   tx.moveCall({
-    target: "0x3::sui_system::request_add_stake", // ← Note: 0x3 instead of 0x2
+    target: "0x3::sui_system::request_add_stake",
     arguments: [
       tx.object("0x5"),
       stakeCoin,
-      tx.pure.address(validator) // ← .address() for addresses
+      tx.pure.address(validator)
     ],
   });
 }
 
-// 🔹 Swap (UPDATED)
+// 🔹 Swap
 function buildSwapTx(
     tx: Transaction,
     { amount = 0, asset, target }: Intent
@@ -103,7 +108,21 @@ function buildSwapTx(
     arguments: [
       tx.pure.string(asset),
       tx.pure.string(target),
-      tx.pure.u64(amount * 1e9), // ← .u64() for numbers
+      tx.pure.u64(amount * 1e9),
     ],
   });
+}
+
+
+/** --- QUERY HANDLER --- **/
+export async function queryBalance(address: string, asset: Asset = "SUI") {
+  const client = new SuiClient({ url: getFullnodeUrl("testnet") });
+
+  let coinType = "0x2::sui::SUI";
+  if (asset !== "SUI") {
+    throw new Error(`Balance query for ${asset} not implemented yet`);
+  }
+
+  const res = await client.getBalance({ owner: address, coinType });
+  return Number(res.totalBalance) / 1e9;
 }
