@@ -1,5 +1,5 @@
 import React, {useEffect} from "react";
-import { ReplaceAll, Gem, Mic, Send, ArrowRightLeftIcon, Square, ChevronDown, Globe, Volume2, XCircle, CheckCircle, Clock, ExternalLink } from "lucide-react";
+import { ReplaceAll, Gem, Mic, Send, ArrowRightLeftIcon, Square, ChevronDown, Globe, Volume2, XCircle, CheckCircle, Clock, ExternalLink, Loader } from "lucide-react";
 import { useState, useRef } from "react";
 import ChatHeader from "../chat/Header.tsx";
 import Swap from "../chat/swap/Swap.tsx";
@@ -20,36 +20,6 @@ type Message = {
     };
 };
 
-
-interface SpeechRecognitionEvent extends Event {
-    readonly results: SpeechRecognitionResultList;
-    readonly resultIndex: number;
-}
-
-interface SpeechRecognition extends EventTarget {
-    continuous: boolean;
-    interimResults: boolean;
-    lang: string;
-    start(): void;
-    stop(): void;
-    onresult: ((event: SpeechRecognitionEvent) => void) | null;
-    onend: (() => void) | null;
-    onerror: ((event: Event) => void) | null;
-    onstart: (() => void) | null;
-}
-
-// Global declaration without conflicting types
-declare global {
-    interface Window {
-        SpeechRecognition: {
-            new (): SpeechRecognition;
-        };
-        webkitSpeechRecognition: {
-            new (): SpeechRecognition;
-        };
-    }
-}
-
 const ChatHome: React.FC = () => {
     const [messages, setMessages] = useState<Message[]>([]);
     const [loading, setLoading] = useState(false);
@@ -59,46 +29,36 @@ const ChatHome: React.FC = () => {
     const [isListening, setIsListening] = useState(false);
     const [isLanguageDropdownOpen, setIsLanguageDropdownOpen] = useState(false);
     const [isTyping, setIsTyping] = useState(false);
+    const [isTranscribing, setIsTranscribing] = useState(false);
 
     const [supportedLanguages] = useState([
         // Nigerian Languages
-        { code: 'ig-NG', name: 'Igbo', flag: '🇳🇬', nativeName: 'Ásụ̀sụ́ Ìgbò' },
-        { code: 'yo-NG', name: 'Yoruba', flag: '🇳🇬', nativeName: 'Èdè Yorùbá' },
-        { code: 'ha-NG', name: 'Hausa', flag: '🇳🇬', nativeName: 'Harshen Hausa' },
-
+        { code: 'ig', name: 'Igbo', flag: '🇳🇬', nativeName: 'Ásụ̀sụ́ Ìgbò', apiCode: 'ig' },
+        { code: 'yo', name: 'Yoruba', flag: '🇳🇬', nativeName: 'Èdè Yorùbá', apiCode: 'yo' },
+        { code: 'ha', name: 'Hausa', flag: '🇳🇬', nativeName: 'Harshen Hausa', apiCode: 'ha' },
         // International Languages
-        { code: 'en-US', name: 'English', flag: '🇺🇸', nativeName: 'English' },
-        { code: 'es-ES', name: 'Spanish', flag: '🇪🇸', nativeName: 'Español' },
-        { code: 'fr-FR', name: 'French', flag: '🇫🇷', nativeName: 'Français' },
-        { code: 'de-DE', name: 'German', flag: '🇩🇪', nativeName: 'Deutsch' },
-        { code: 'it-IT', name: 'Italian', flag: '🇮🇹', nativeName: 'Italiano' },
-        { code: 'pt-BR', name: 'Portuguese', flag: '🇧🇷', nativeName: 'Português' },
-        { code: 'ja-JP', name: 'Japanese', flag: '🇯🇵', nativeName: '日本語' },
-        { code: 'ko-KR', name: 'Korean', flag: '🇰🇷', nativeName: '한국어' },
-        { code: 'zh-CN', name: 'Chinese', flag: '🇨🇳', nativeName: '中文' },
+        { code: 'en-US', name: 'English', flag: '🇺🇸', nativeName: 'English', apiCode: 'en' },
+        { code: 'es-ES', name: 'Spanish', flag: '🇪🇸', nativeName: 'Español', apiCode: 'es' },
+        { code: 'fr-FR', name: 'French', flag: '🇫🇷', nativeName: 'Français', apiCode: 'fr' },
+        { code: 'de-DE', name: 'German', flag: '🇩🇪', nativeName: 'Deutsch', apiCode: 'de' },
+        { code: 'it-IT', name: 'Italian', flag: '🇮🇹', nativeName: 'Italiano', apiCode: 'it' },
+        { code: 'pt-BR', name: 'Portuguese', flag: '🇧🇷', nativeName: 'Português', apiCode: 'pt' },
+        { code: 'ja-JP', name: 'Japanese', flag: '🇯🇵', nativeName: '日本語', apiCode: 'ja' },
+        { code: 'ko-KR', name: 'Korean', flag: '🇰🇷', nativeName: '한국어', apiCode: 'ko' },
+        { code: 'zh-CN', name: 'Chinese', flag: '🇨🇳', nativeName: '中文', apiCode: 'zh' },
     ]);
 
     const [currentLanguage, setCurrentLanguage] = useState('en-US');
 
     const chatEndRef = useRef<HTMLDivElement>(null);
-    const recognitionRef = useRef<SpeechRecognition | null>(null);
+    const mediaRecorderRef = useRef<MediaRecorder | null>(null);
+    const audioChunksRef = useRef<Blob[]>([]);
     const synthRef = useRef<SpeechSynthesis | null>(null);
     const languageDropdownRef = useRef<HTMLDivElement>(null);
     const {addContact, contacts} = useContacts();
     const { mutate: signTransaction } = useSignTransaction();
     const client = useSuiClient();
 
-    // Enhanced custom vocabulary for better recognition
-    // const customVocabulary = {
-    //     'sui': ['sui', 'SUI', 'Sui', 'sweet', 'suite', 'switch', 'sweat', 'swi'],
-    //     'usdc': ['usdc', 'USDC', 'you es dee see'],
-    //     'bitcoin': ['bitcoin', 'Bitcoin', 'bit coin'],
-    //     'eth': ['eth', 'ETH', 'ethereum'],
-    //     'send': ['send', 'Send', 'fún', 'ziga', 'aika'],
-    //     'transfer': ['transfer', 'Transfer', 'tránsá', 'nyefee', 'canja']
-    // };
-
-    // Close dropdown when clicking outside
     useEffect(() => {
         const handleClickOutside = (event: MouseEvent) => {
             if (languageDropdownRef.current && !languageDropdownRef.current.contains(event.target as Node)) {
@@ -110,212 +70,138 @@ const ChatHome: React.FC = () => {
         return () => document.removeEventListener('mousedown', handleClickOutside);
     }, []);
 
-    // Initialize Speech Recognition with enhanced configuration
     useEffect(() => {
-        const initSpeechRecognition = () => {
-            // Check if browser supports speech recognition
-            const SpeechRecognitionClass = (window as any).SpeechRecognition || (window as any).webkitSpeechRecognition;
-
-            if (!SpeechRecognitionClass) {
-                console.warn('Speech Recognition not supported in this browser');
-                setMessages(prev => [...prev, {
-                    sender: "bot",
-                    text: "❌ Voice input is not supported in your browser. Please use Chrome, Edge, or Safari."
-                }]);
-                return;
-            }
-
-            const recognition = new SpeechRecognitionClass();
-            recognitionRef.current = recognition;
-
-            // Enhanced configuration for better accuracy
-            recognition.continuous = false;
-            recognition.interimResults = true;
-            recognition.maxAlternatives = 3; // Get multiple alternatives for better accuracy
-            recognition.lang = currentLanguage;
-
-            recognition.onstart = () => {
-                console.log('Speech recognition started');
-                setIsListening(true);
-            };
-
-            recognition.onresult = (event: SpeechRecognitionEvent) => {
-                let finalTranscript = '';
-                let interimTranscript = '';
-
-                for (let i = event.resultIndex; i < event.results.length; i++) {
-                    const transcript = event.results[i][0].transcript;
-
-                    if (event.results[i].isFinal) {
-                        finalTranscript = transcript;
-                    } else {
-                        interimTranscript = transcript;
-                    }
-                }
-
-                if (finalTranscript) {
-                    // Apply enhanced corrections
-                    let correctedTranscript = finalTranscript.toLowerCase();
-
-                    // Enhanced corrections for common misrecognitions
-                    const corrections = {
-                        'sweet': 'sui',
-                        'suite': 'sui',
-                        'switch': 'sui',
-                        'sweat': 'sui',
-                        'swi': 'sui',
-                        'sri': 'sui',
-                        'see': 'sui',
-                        'sway': 'sui',
-                        'sue': 'sui',
-                        'you es dee see': 'USDC',
-                        'bit coin': 'Bitcoin',
-                        'b m i': 'bmi',
-                        'b. m. i.': 'bmi',
-                        'be am i': 'bmi',
-                        'beam i': 'bmi',
-                    };
-
-                    Object.entries(corrections).forEach(([wrong, correct]) => {
-                        const regex = new RegExp(`\\b${wrong}\\b`, 'gi');
-                        correctedTranscript = correctedTranscript.replace(regex, correct);
-                    });
-
-                    // Language-specific enhancements
-                    if (currentLanguage === 'yo-NG') {
-                        // Yoruba-specific corrections
-                        const yorubaCorrections = {
-                            'fún': 'send',
-                            'rán': 'send',
-                            'sùí': 'sui'
-                        };
-                        Object.entries(yorubaCorrections).forEach(([wrong, correct]) => {
-                            const regex = new RegExp(`\\b${wrong}\\b`, 'gi');
-                            correctedTranscript = correctedTranscript.replace(regex, correct);
-                        });
-                    }
-
-                    if (currentLanguage === 'ig-NG') {
-                        // Igbo-specific corrections
-                        const igboCorrections = {
-                            'ziga': 'send',
-                            'sùì': 'sui'
-                        };
-                        Object.entries(igboCorrections).forEach(([wrong, correct]) => {
-                            const regex = new RegExp(`\\b${wrong}\\b`, 'gi');
-                            correctedTranscript = correctedTranscript.replace(regex, correct);
-                        });
-                    }
-
-                    if (currentLanguage === 'ha-NG') {
-                        // Hausa-specific corrections
-                        const hausaCorrections = {
-                            'aika': 'send',
-                            'tuma': 'send',
-                            'swi': 'sui'
-                        };
-                        Object.entries(hausaCorrections).forEach(([wrong, correct]) => {
-                            const regex = new RegExp(`\\b${wrong}\\b`, 'gi');
-                            correctedTranscript = correctedTranscript.replace(regex, correct);
-                        });
-                    }
-
-                    console.log('Corrected transcript:', correctedTranscript);
-                    setInput(correctedTranscript);
-                } else if (interimTranscript) {
-                    // Show interim results for better UX
-                    setInput(interimTranscript);
-                }
-            };
-
-            recognition.onend = () => {
-                console.log('Speech recognition ended');
-                setIsListening(false);
-            };
-
-            recognition.onerror = (event: Event) => {
-                const errorEvent = event as any;
-                console.error('Speech recognition error:', errorEvent.error);
-                setIsListening(false);
-
-                let errorMessage = 'Voice input error: ';
-                switch (errorEvent.error) {
-                    case 'not-allowed':
-                        errorMessage += 'Microphone access denied. Please allow microphone permissions.';
-                        break;
-                    case 'audio-capture':
-                        errorMessage += 'No microphone found. Please check your audio devices.';
-                        break;
-                    case 'network':
-                        errorMessage += 'Network error occurred. Please check your connection.';
-                        break;
-                    case 'no-speech':
-                        errorMessage += 'No speech detected. Please try again.';
-                        break;
-                    default:
-                        errorMessage += `${errorEvent.error}. Please try again.`;
-                }
-
-                setMessages(prev => [...prev, {
-                    sender: "bot",
-                    text: `❌ ${errorMessage}`
-                }]);
-            };
-        };
-
-        // Initialize speech synthesis for text-to-speech
         if ('speechSynthesis' in window) {
             synthRef.current = window.speechSynthesis;
         }
+    }, []);
 
-        initSpeechRecognition();
+    const getLanguageApiCode = (langCode: string): string => {
+        const lang = supportedLanguages.find(l => l.code === langCode);
+        return lang?.name || 'English';
+    };
 
-        // Cleanup function
-        return () => {
-            if (recognitionRef.current) {
-                recognitionRef.current.stop();
+    const transcribeAudio = async (audioBlob: Blob, language: string): Promise<string> => {
+        try {
+            setIsTranscribing(true);
+
+            // Convert blob to base64
+            const audioBase64 = await new Promise<string>((resolve) => {
+                const reader = new FileReader();
+                reader.readAsDataURL(audioBlob);
+                reader.onloadend = () => {
+                    // Remove data URL prefix
+                    const base64 = reader.result as string;
+                    resolve(base64.split(',')[1]);
+                };
+            });
+
+            const response = await fetch('https://milobrain.onrender.com/api/v1/ai/transcribe', {
+                method: 'POST',
+                headers: {
+                    'Content-Type': 'application/json',
+                },
+                body: JSON.stringify({
+                    audio: audioBase64,
+                    mimeType: 'audio/wav',
+                    language: getLanguageApiCode(language)
+                }),
+            });
+
+            if (!response.ok) {
+                throw new Error(`Transcription failed: ${response.statusText}`);
             }
-        };
-    }, [currentLanguage]);
 
-    const toggleListening = () => {
-        if (!recognitionRef.current) {
-            setMessages(prev => [...prev, {
-                sender: "bot",
-                text: "❌ Speech recognition not available. Please refresh the page."
-            }]);
-            return;
+            const data = await response.json();
+
+            if (data.transcription) {
+                return data.transcription;
+            } else {
+                throw new Error('No transcription text returned');
+            }
+        } catch (error) {
+            console.error('Transcription error:', error);
+            throw error;
+        } finally {
+            setIsTranscribing(false);
         }
+    };
 
-        if (isListening) {
-            recognitionRef.current.stop();
-            setIsListening(false);
-        } else {
-            // Enhanced microphone permission handling
-            if (navigator.mediaDevices && navigator.mediaDevices.getUserMedia) {
-                navigator.mediaDevices.getUserMedia({
-                    audio: {
-                        echoCancellation: true,
-                        noiseSuppression: true,
-                        autoGainControl: true
-                    }
-                })
-                    .then((stream) => {
-                        // Stop all tracks to release microphone immediately
-                        stream.getTracks().forEach(track => track.stop());
-                        setInput(""); // Clear previous input
-                        recognitionRef.current?.start();
-                    })
-                    .catch(err => {
-                        console.error('Microphone permission denied:', err);
+    // Start recording audio
+    const startRecording = async () => {
+        try {
+            if (!navigator.mediaDevices || !navigator.mediaDevices.getUserMedia) {
+                throw new Error('Audio recording not supported in this browser');
+            }
+
+            const stream = await navigator.mediaDevices.getUserMedia({
+                audio: {
+                    echoCancellation: true,
+                    noiseSuppression: true,
+                    autoGainControl: true
+                }
+            });
+
+            audioChunksRef.current = [];
+            mediaRecorderRef.current = new MediaRecorder(stream, {
+                mimeType: 'audio/webm;codecs=opus'
+            });
+
+            mediaRecorderRef.current.ondataavailable = (event) => {
+                if (event.data.size > 0) {
+                    audioChunksRef.current.push(event.data);
+                }
+            };
+
+            mediaRecorderRef.current.onstop = async () => {
+                // Stop all tracks
+                stream.getTracks().forEach(track => track.stop());
+
+                if (audioChunksRef.current.length > 0) {
+                    const audioBlob = new Blob(audioChunksRef.current, { type: 'audio/wav' });
+
+                    try {
+                        const transcribedText = await transcribeAudio(audioBlob, currentLanguage);
+                        setInput(transcribedText);
+                    } catch (error) {
+                        console.error('Transcription failed:', error);
                         setMessages(prev => [...prev, {
                             sender: "bot",
-                            text: "❌ Microphone access is required for voice input. Please allow microphone permissions in your browser settings."
+                            text: "❌ Voice transcription failed. Please try again or type your message."
                         }]);
-                    });
-            } else {
-                recognitionRef.current.start();
-            }
+                    }
+                }
+            };
+
+            mediaRecorderRef.current.start();
+            setIsListening(true);
+
+        } catch (error) {
+            console.error('Error starting recording:', error);
+            setMessages(prev => [...prev, {
+                sender: "bot",
+                text: "❌ Microphone access is required for voice input. Please allow microphone permissions."
+            }]);
+        }
+    };
+
+    // Stop recording audio
+    const stopRecording = () => {
+        if (mediaRecorderRef.current && isListening) {
+            mediaRecorderRef.current.stop();
+            setIsListening(false);
+        }
+    };
+
+    // Toggle voice recording
+    const toggleListening = () => {
+        if (isTranscribing) return; // Prevent multiple clicks during transcription
+
+        if (isListening) {
+            stopRecording();
+        } else {
+            setInput(""); // Clear previous input
+            startRecording();
         }
     };
 
@@ -335,14 +221,10 @@ const ChatHome: React.FC = () => {
         setCurrentLanguage(langCode);
         setIsLanguageDropdownOpen(false);
 
-        if (recognitionRef.current) {
-            recognitionRef.current.lang = langCode;
-        }
-
         const languageTips: { [key: string]: string } = {
-            'yo-NG': "💡 Pro tip: Say 'S-U-I' slowly or 'Sui coin' for best recognition",
-            'ig-NG': "💡 Pro tip: Spell 'S-U-I' clearly for cryptocurrency terms",
-            'ha-NG': "💡 Pro tip: Pronounce 'S-U-I' distinctly for crypto words",
+            'yo': "💡 Pro tip: Say 'S-U-I' slowly or 'Sui coin' for best recognition",
+            'ig': "💡 Pro tip: Spell 'S-U-I' clearly for cryptocurrency terms",
+            'ha': "💡 Pro tip: Pronounce 'S-U-I' distinctly for crypto words",
             'en-US': "💡 Speak clearly and use natural commands like 'send 10 SUI to John'"
         };
 
@@ -370,7 +252,6 @@ const ChatHome: React.FC = () => {
 
     const submitTransaction = async (bytes: string, signature: string) => {
         try {
-
             setMessages((prev) => [
                 ...prev,
                 {
@@ -521,7 +402,6 @@ const ChatHome: React.FC = () => {
         );
     };
 
-
     const RegularMessage = ({ message }: { message: Message }) => {
         return (
             <div className={`max-w-[80%] px-4 py-2 rounded-xl text-sm relative ${
@@ -542,7 +422,6 @@ const ChatHome: React.FC = () => {
             </div>
         );
     };
-
 
     const executeTransfer = async (intent: any) => {
         try {
@@ -624,14 +503,13 @@ const ChatHome: React.FC = () => {
             </div>
 
             { steps === "swap" && <Swap /> }
-
             { steps !== "swap" && <><br /><br /><br /><br /><br /></> }
 
             {loading && <div className="text-sm text-gray-400 mb-2">Milo is thinking...</div>}
 
             {/* Voice Recognition Tips */}
             <div className="text-xs text-blue-600 mb-2 text-center max-w-md">
-                💡 Tips: Speak clearly, use "sui" for SUI token. The system learns from corrections.
+                💡 Speak clearly in your preferred language. Gemini AI will transcribe your voice.
             </div>
 
             { steps !== "swap" && (
@@ -681,7 +559,18 @@ const ChatHome: React.FC = () => {
                                                 />
                                             ))}
                                         </div>
-                                        <span className="text-sm">Listening... Speak now</span>
+                                        <span className="text-sm">Recording... Speak now</span>
+                                    </div>
+                                </div>
+                            </div>
+                        )}
+
+                        {isTranscribing && (
+                            <div className="flex justify-start">
+                                <div className="bg-gray-100 text-gray-800 rounded-xl rounded-bl-none px-4 py-2 max-w-[80%]">
+                                    <div className="flex items-center space-x-2">
+                                        <Loader size={16} className="animate-spin text-blue-500" />
+                                        <span className="text-sm">Transcribing your voice...</span>
                                     </div>
                                 </div>
                             </div>
@@ -692,6 +581,7 @@ const ChatHome: React.FC = () => {
             )}
 
             <div className={`hidden lg:flex flex-col items-center ${ messages.length == 0 ? "justify-center" : "justify-end"} flex-1 px-4 md:px-0`}>
+                {/* ... (keep your existing greeting logic) */}
                 { steps === "send" && (
                     messages.length == 0 && (
                         greet === "1" ? (
@@ -704,7 +594,8 @@ const ChatHome: React.FC = () => {
                 { steps === "mint" && (
                     messages.length == 0 && (
                         <h1 className="lg:text-3xl md:text-4xl text-2xl md:text-4xl font-semibold mb-10">Hey there, Want to mint an <b className="font-semibold text-[#6C55F5]">NFT?</b></h1>
-                    ))}
+                    ))
+                }
 
                 <div className="bg-[#ffffff] gap-3 mb-4 rounded-2xl px-4 py-3 w-[90%] md:w-[700px] shadow-lg">
                     <div className="flex items-center gap-3">
@@ -712,15 +603,19 @@ const ChatHome: React.FC = () => {
                             value={input}
                             onChange={(e) => setInput(e.target.value)}
                             onKeyPress={handleKeyPress}
-                            placeholder={isListening ? "Listening... Speak now" : "Make any transaction or speak your command..."}
+                            placeholder={
+                                isTranscribing ? "Transcribing..." :
+                                    isListening ? "Recording... Speak now" :
+                                        "Make any transaction or speak your command..."
+                            }
                             className="flex-1 bg-transparent outline-none text-sm md:text-base placeholder-gray-400 resize-none"
                             rows={2}
-                            disabled={isListening}
+                            disabled={isListening || isTranscribing}
                         />
                         <button
                             onClick={() => handleSendMessage(input)}
                             className="flex items-center gap-1 bg-[#6C55F5] px-2 py-1 rounded-lg text-xs hover:bg-[#50515F] transition"
-                            disabled={isListening || !input.trim()}
+                            disabled={isListening || isTranscribing || !input.trim()}
                         >
                             <Send size={14} className={"text-white"} />
                         </button>
@@ -731,18 +626,21 @@ const ChatHome: React.FC = () => {
                         <button
                             onClick={() => setInput('send 5 SUI to John')}
                             className="px-2 py-1 text-xs bg-gray-100 hover:bg-gray-200 rounded transition-colors"
+                            disabled={isListening || isTranscribing}
                         >
                             send 5 SUI to John
                         </button>
                         <button
                             onClick={() => setInput('swap 10 SUI to USDC')}
                             className="px-2 py-1 text-xs bg-gray-100 hover:bg-gray-200 rounded transition-colors"
+                            disabled={isListening || isTranscribing}
                         >
                             swap 10 SUI to USDC
                         </button>
                         <button
                             onClick={() => setInput('check my balance')}
                             className="px-2 py-1 text-xs bg-gray-100 hover:bg-gray-200 rounded transition-colors"
+                            disabled={isListening || isTranscribing}
                         >
                             check my balance
                         </button>
@@ -750,6 +648,7 @@ const ChatHome: React.FC = () => {
 
                     <div className="flex justify-between mt-4 items-center gap-2">
                         <div className="flex items-center gap-2 text-xs">
+                            {/* ... (keep your existing buttons) */}
                             <button onClick={() => setSteps("send")} className={`flex hover:text-white items-center border gap-1 px-2 py-1 rounded-lg text-xs ${steps === "send" ? "bg-[#6C55F5] text-white" : "bg-[#fffff]"} hover:bg-[#6C55F5] transition`}>
                                 <ArrowRightLeftIcon size={14} />
                                 Send
@@ -852,14 +751,23 @@ const ChatHome: React.FC = () => {
 
                             <button
                                 onClick={toggleListening}
+                                disabled={isTranscribing}
                                 className={`flex items-center gap-1 px-2 py-1 rounded-lg text-xs transition ${
-                                    isListening
-                                        ? "bg-red-500 text-white hover:bg-red-600 animate-pulse"
-                                        : "bg-white border border-gray-300 text-gray-600 hover:bg-[#6C55F5] hover:text-white"
+                                    isTranscribing
+                                        ? "bg-gray-300 text-gray-500 cursor-not-allowed"
+                                        : isListening
+                                            ? "bg-red-500 text-white hover:bg-red-600 animate-pulse"
+                                            : "bg-white border border-gray-300 text-gray-600 hover:bg-[#6C55F5] hover:text-white"
                                 }`}
                             >
-                                {isListening ? <Square size={14} /> : <Mic size={14} />}
-                                {isListening ? "Stop" : "Voice"}
+                                {isTranscribing ? (
+                                    <Loader size={14} className="animate-spin" />
+                                ) : isListening ? (
+                                    <Square size={14} />
+                                ) : (
+                                    <Mic size={14} />
+                                )}
+                                {isTranscribing ? "Processing" : isListening ? "Stop" : "Voice"}
                             </button>
                         </div>
                     </div>
