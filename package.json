@@ -24,8 +24,10 @@
     "microsoft-cognitiveservices-speech-sdk": "^1.46.0",
     "react": "^19.1.1",
     "react-dom": "^19.1.1",
+    "react-hot-toast": "^2.6.0",
     "react-speech-recognition": "^4.0.1",
     "recordrtc": "^5.6.2",
+    "tailwind-merge": "^3.3.1",
     "whisper-live": "^0.2.1"
   },
   "devDependencies": {

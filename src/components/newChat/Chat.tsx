@@ -6,6 +6,7 @@ import Swap from "../chat/swap/Swap.tsx";
 import {useContacts} from "../../hooks/useContacts.ts";
 import {useSignTransaction, useSuiClient} from "@mysten/dapp-kit";
 import {buildTransaction} from "../../lib/suiTxBuilder.ts";
+import Mint from "../chat/mint/Mint.tsx";
 
 type Message = {
     sender: "user" | "bot";
@@ -503,7 +504,8 @@ const ChatHome: React.FC = () => {
             </div>
 
             { steps === "swap" && <Swap /> }
-            { steps !== "swap" && <><br /><br /><br /><br /><br /></> }
+            { steps === "mint" && <Mint /> }
+            { steps !== "swap" && steps !== "mint" ?<><br /><br /><br /><br /><br /></> : ""}
 
             {loading && <div className="text-sm text-gray-400 mb-2">Milo is thinking...</div>}
 
