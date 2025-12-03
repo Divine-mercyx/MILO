@@ -7,35 +7,52 @@ import ChatArea from "./ChatArea.tsx";
 import ContactModal from "./ContactModal.tsx";
 import {MenuIcon} from "../../assets/icons/icons.tsx";
 
-const ChatPage: React.FC = () => {
+export const ChatPage: React.FC = () => {
     const [sidebarOpen, setSidebarOpen] = useState(false);
     const [modalOpen, setModalOpen] = useState(false);
     const [contacts, setContacts] = useState<Contact[]>([
         { name: 'Alice', address: '0x123...abc' },
         { name: 'Bob', address: '0x456...def' },
     ]);
-
+    
     const [messages, setMessages] = useState<Message[]>([
-        { id: 1, text: "Hello! I'm MILO. How can I help you with your finances today? You can ask me to send crypto, swap tokens, or check your NFT gallery.", sender: 'bot' }
+        { 
+            text: "Hello! I'm MILO. How can I help you with your finances today? You can ask me to send crypto, swap tokens, or check your NFT gallery.", 
+            sender: 'bot',
+            timestamp: new Date()
+        }
     ]);
-    const [currentInput, setCurrentInput] = useState('');
+    const [userInput, setUserInput] = useState('');
     const [isLoading, setIsLoading] = useState(false);
-
 
     const handleAddContact = (contact: Contact) => {
         setContacts(prev => [...prev, contact]);
         setModalOpen(false);
     };
 
-    const handleSendMessage = async (e: React.FormEvent) => {
-        e.preventDefault();
-        if (!currentInput.trim() || isLoading) return;
+    const handleSend = async () => {
+        if (!userInput.trim()) return;
 
-        const userInput = currentInput.trim();
-        setMessages(prev => [...prev, { id: Date.now(), text: userInput, sender: 'user' }]);
-        setCurrentInput('');
+        // Add user message
+        const userMessage: Message = {
+            text: userInput,
+            sender: 'user',
+            timestamp: new Date()
+        };
+        setMessages(prev => [...prev, userMessage]);
+        setUserInput('');
         setIsLoading(true);
 
+        // Simulate a response from the bot
+        const botResponse: Message = {
+            text: "Thank you for your message!",
+            sender: 'bot',
+            timestamp: new Date()
+        };
+        setTimeout(() => {
+            setMessages(prev => [...prev, botResponse]);
+            setIsLoading(false);
+        }, 1000);
     };
 
     return (
@@ -53,9 +70,9 @@ const ChatPage: React.FC = () => {
                     </button>
                     <ChatArea
                         messages={messages}
-                        currentInput={currentInput}
-                        onInputChange={(e) => setCurrentInput(e.target.value)}
-                        onSendMessage={handleSendMessage}
+                        currentInput={userInput}
+                        onInputChange={(e) => setUserInput(e.target.value)}
+                        onSendMessage={handleSend}
                         isLoading={isLoading}
                     />
                 </main>
@@ -70,4 +87,3 @@ const ChatPage: React.FC = () => {
         </>
     )
 }
-export default ChatPage;

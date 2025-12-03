@@ -1,69 +1,50 @@
 import React, { useState } from 'react';
-import {Clock, CustomerCare, Logo} from "../../assets/icons/icons.tsx";
+import {CustomerCare, Logo} from "../../assets/icons/icons.tsx";
 import {WalletConnection} from "../landing/WalletConnection.tsx";
 import ContactModal from "../chatTest/ContactModal.tsx";
-
-type Contact = {
-    name: string;
-    address: string;
-};
+import type { Contact } from '../../types/types.ts';
+import { Plus } from 'lucide-react';
 
 interface ChatHeaderProps {
     addContact: (contact: Contact) => void;
     contacts: Contact[];
 }
 
-
 const ChatHeader: React.FC<ChatHeaderProps> = ({ addContact, contacts }) => {
-    const [isOpen, setIsOpen] = useState(false);
-
-    const onAddContact = (contact: Contact) => {
-        addContact(contact);
-    }
-
-    const onClose = () => {
-        setIsOpen(false);
-    }
-
+    const [isModalOpen, setIsModalOpen] = useState(false);
 
     return (
-        <>
-            <div className="flex w-full items-center fixed z-50 justify-between py-4 px-6 lg:px-[190px] bg-white/95 backdrop-blur-lg shadow-sm">
-                <Logo className={"lg:w-[260px]"} />
-
-                <nav className="hidden lg:flex items-center space-x-4">
-                    <button className="group relative text-white rounded-l-3xl font-semibold flex items-center gap-3 px-6 py-2 bg-[#6C55F5] backdrop-blur-xl border border-white/20 rounded-lg shadow-2xl hover:shadow-purple-500/25 transition-all duration-300 hover:scale-105 hover:border-white/30">
-                        Features
-                    </button>
-                    <button className="group relative border border-[#6C55F5] font-semibold text-[#6C55F5] flex items-center gap-3 px-6 py-2 backdrop-blur-xl rounded-lg shadow-2xl hover:shadow-purple-500/25 transition-all duration-300 hover:scale-105 hover:border-white/30">
-                        Contacts
-                    </button>
-                    <button className="group relative border border-[#6C55F5] font-semibold text-[#6C55F5] flex items-center gap-3 px-6 py-2 backdrop-blur-xl rounded-lg shadow-2xl hover:shadow-purple-500/25 transition-all duration-300 hover:scale-105 hover:border-white/30">
-                        History
-                    </button>
-                    <button className="group relative border border-[#6C55F5] rounded-r-3xl text-[#6C55F5] font-semibold flex items-center gap-3 px-6 py-2 backdrop-blur-xl rounded-lg shadow-2xl hover:shadow-purple-500/25 transition-all duration-300 hover:scale-105 hover:border-white/30">
-                        Docs
-                    </button>
-                </nav>
-
-
-                <div className="flex items-center space-x-2 sm:space-x-4">
-                    <div className="hidden lg:flex items-center space-x-4">
-                        <button onClick={() => setIsOpen(true)}>
-                            <CustomerCare  />
-                        </button>
-                        <Clock />
-                        <WalletConnection />
-                    </div>
+        <div className="bg-white border-b border-gray-200 w-full">
+            <header className="py-4 px-6 flex items-center justify-between">
+                <div className="flex items-center space-x-3">
+                    <Logo className={'text-blue-600'} />
+                    {/* <h1 className="text-xl font-bold text-gray-900">Milo</h1> */}
                 </div>
-            </div>
 
+                <div className="flex items-center space-x-4">
+                    <button 
+                        onClick={() => setIsModalOpen(true)}
+                        className="flex items-center space-x-1 bg-gray-50 hover:bg-gray-100 text-gray-700 hover:text-gray-900 px-3 py-1.5 rounded-lg transition-colors border border-gray-200"
+                    >
+                        <Plus size={16} />
+                        <span>Add Contact</span>
+                    </button>
+                    <div className="text-gray-600 hover:text-gray-900 cursor-pointer transition-colors">
+                        <CustomerCare />
+                    </div>
+                    <WalletConnection />
+                </div>
+            </header>
 
-            {isOpen && (
-                <ContactModal onClose={onClose} onAddContact={onAddContact} contacts={contacts} />
+            {isModalOpen && (
+                <ContactModal
+                    onClose={() => setIsModalOpen(false)}
+                    onAddContact={addContact}
+                    contacts={contacts}
+                />
             )}
-        </>
-    )
-}
+        </div>
+    );
+};
 
 export default ChatHeader;

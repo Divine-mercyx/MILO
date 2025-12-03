@@ -20,11 +20,11 @@ const ChatArea: React.FC<{
         <>
             <div className="flex flex-col flex-1 h-full">
                 <div className="flex-1 overflow-y-auto p-6 space-y-6">
-                    {messages.map((msg) => (
-                        <div key={msg.id} className={`flex items-start gap-4 ${msg.sender === 'user' ? 'justify-end' : ''}`}>
+                    {messages.map((msg, index) => (
+                        <div key={index} className={`flex items-start gap-4 ${msg.sender === 'user' ? 'justify-end' : ''}`}>
                             {msg.sender === 'bot' && <div className="w-8 h-8 rounded-full bg-milo-purple flex items-center justify-center flex-shrink-0"><UserIcon className="w-5 h-5 text-white"/></div>}
                             <div className={`max-w-md p-4 rounded-2xl ${msg.sender === 'user' ? 'bg-milo-purple text-white rounded-br-none' : 'bg-white shadow-subtle rounded-bl-none'}`}>
-                                <p className="text-sm whitespace-pre-wrap">{msg.text}{isLoading && msg.sender === 'bot' && msg.id === messages[messages.length-1].id && <span className="inline-block w-2 h-4 bg-milo-text ml-1 animate-pulse"></span>}</p>
+                                <p className="text-sm whitespace-pre-wrap">{msg.text}{isLoading && msg.sender === 'bot' && index === messages.length-1 && <span className="inline-block w-2 h-4 bg-milo-text ml-1 animate-pulse"></span>}</p>
                             </div>
                             {msg.sender === 'user' && <div className="w-8 h-8 rounded-full bg-milo-dark-purple flex items-center justify-center flex-shrink-0"><UserIcon className="w-5 h-5 text-white"/></div>}
                         </div>

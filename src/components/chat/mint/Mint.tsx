@@ -120,7 +120,7 @@ const Mint: React.FC = () => {
         }
     };
     return (
-        <section className="mt-20 relative container mx-auto px-6 py-10 sm:py-32 lg:py-10 lg:text-center">
+        <section className="relative container mx-auto px-6 py-10 sm:py-32 lg:py-10 lg:text-center">
             <h1 style={{ fontFamily: "poppins" }} className="text-3xl hidden lg:block md:block md:text-[35.55px] font-semibold text-milo-dark-purpl bg-gradient-to-r from-[#7062FF] to-[#362F7B] bg-clip-text text-transparent leading-tight lg:leading-[36px]">
                 Mint your NFT on <span className="text-[#362F7B]">Sui with MILO</span>
             </h1>

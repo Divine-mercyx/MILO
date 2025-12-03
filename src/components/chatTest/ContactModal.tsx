@@ -14,18 +14,20 @@ const ContactModal: React.FC<ContactModalProps> = ({ onClose, onAddContact, cont
 
     const handleSubmit = (e: React.FormEvent) => {
         e.preventDefault();
-        if (name.trim() && address.trim()) {
+        if (name.trim() && address.trim() && !contacts.some(contact => contact.address === address.toLowerCase())) {
             onAddContact({ name, address });
+        } else {
+            alert('Please enter a valid name and address.');
         }
     };
 
     return (
         <div className="fixed inset-0 bg-black/50 flex items-center justify-center z-50 p-4" role="dialog" aria-modal="true" aria-labelledby="modal-title">
             <div className="bg-white rounded-2xl shadow-lg w-full max-w-md p-6 relative animate-fade-in-up">
-                <button onClick={onClose} className="absolute top-4 right-4 text-gray-400 hover:text-gray-600" aria-label="Close">
+                <button onClick={onClose} className="absolute top-4 right-4 text-gray-500 hover:text-gray-700" aria-label="Close">
                     <CloseIcon className="w-6 h-6" />
                 </button>
-                <h2 id="modal-title" className="text-2xl font-bold text-milo-dark-purple mb-4">Add New Contact</h2>
+                <h2 id="modal-title" className="text-2xl font-bold text-gray-900 mb-4">Add New Contact</h2>
                 <form onSubmit={handleSubmit} className="space-y-4">
                     <div>
                         <label htmlFor="name" className="block text-sm font-medium text-gray-700">Name</label>
@@ -34,7 +36,7 @@ const ContactModal: React.FC<ContactModalProps> = ({ onClose, onAddContact, cont
                             type="text"
                             value={name}
                             onChange={(e) => setName(e.target.value)}
-                            className="mt-1 block w-full px-3 py-2 border border-gray-300 rounded-md shadow-sm placeholder-gray-400 focus:outline-none focus:ring-milo-purple focus:border-milo-purple sm:text-sm"
+                            className="mt-1 block w-full px-3 py-2 border border-gray-300 rounded-md shadow-sm placeholder-gray-400 focus:outline-none focus:ring-blue-500 focus:border-blue-500 sm:text-sm"
                             placeholder="e.g., Alice"
                             required
                         />
@@ -46,7 +48,7 @@ const ContactModal: React.FC<ContactModalProps> = ({ onClose, onAddContact, cont
                             type="text"
                             value={address}
                             onChange={(e) => setAddress(e.target.value)}
-                            className="mt-1 block w-full px-3 py-2 border border-gray-300 rounded-md shadow-sm placeholder-gray-400 focus:outline-none focus:ring-milo-purple focus:border-milo-purple sm:text-sm"
+                            className="mt-1 block w-full px-3 py-2 border border-gray-300 rounded-md shadow-sm placeholder-gray-400 focus:outline-none focus:ring-blue-500 focus:border-blue-500 sm:text-sm"
                             placeholder="0x..."
                             required
                         />
@@ -54,7 +56,7 @@ const ContactModal: React.FC<ContactModalProps> = ({ onClose, onAddContact, cont
                     <div className="pt-2">
                         <button
                             type="submit"
-                            className="w-full flex justify-center py-3 px-4 border border-transparent rounded-lg shadow-sm text-sm font-bold text-white bg-milo-purple hover:opacity-90 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-milo-purple disabled:opacity-50"
+                            className="w-full flex justify-center py-3 px-4 border border-transparent rounded-lg shadow-sm text-sm font-bold text-white bg-blue-600 hover:bg-blue-700 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-blue-500 disabled:opacity-50"
                             disabled={!name.trim() || !address.trim()}
                         >
                             Save Contact
