@@ -1,28 +1,22 @@
-import React, {useEffect} from "react";
-import { ReplaceAll, Gem, Mic, Send, ArrowRightLeftIcon, Square, ChevronDown, Globe, Volume2, XCircle, CheckCircle, Clock, ExternalLink, Loader } from "lucide-react";
+import React, { useEffect } from "react";
+import { ReplaceAll, Gem, Mic, Send, ArrowRightLeftIcon, Square, ChevronDown, Globe, Volume2, XCircle, CheckCircle, Clock, ExternalLink, Loader, Plus, Menu, X } from "lucide-react";
 import { useState, useRef } from "react";
 import ChatHeader from "../chat/Header.tsx";
 import Swap from "../chat/swap/Swap.tsx";
-import {useContacts} from "../../hooks/useContacts.ts";
-import {useSignTransaction, useSuiClient} from "@mysten/dapp-kit";
-import {buildTransaction} from "../../lib/suiTxBuilder.ts";
+import { useContacts } from "../../hooks/useContacts.ts";
+import { useSignTransaction, useSuiClient } from "@mysten/dapp-kit";
+import { buildTransaction } from "../../lib/suiTxBuilder.ts";
 import Mint from "../chat/mint/Mint.tsx";
+import { AIProcessor } from "../../AI/index.ts";
+import { useChatHistory } from "../../hooks/useChatHistory.ts";
+import type { ChatHistoryItem } from "../../types/types.ts";
 
-type Message = {
-    sender: "user" | "bot";
-    text: string;
-    type?: 'text' | 'transaction' | 'error';
-    transactionData?: {
-        digest?: string;
-        status?: 'pending' | 'success' | 'failed';
-        gasUsed?: string;
-        eventsCount?: number;
-        timestamp?: Date;
-    };
-};
+// Initialize AI processor with API key
+const API_KEY = "AIzaSyBbTzon1yyflIr6Kjg8KKS3dIAFYpGJmrk"; // In production, this should come from environment variables
+let aiProcessor: AIProcessor | null = null;
 
 const ChatHome: React.FC = () => {
-    const [messages, setMessages] = useState<Message[]>([]);
+    const [messages, setMessages] = useState<any[]>([]);
     const [loading, setLoading] = useState(false);
     const [input, setInput] = useState("");
     const [greet, setGreet] = useState("1");
@@ -31,6 +25,10 @@ const ChatHome: React.FC = () => {
     const [isLanguageDropdownOpen, setIsLanguageDropdownOpen] = useState(false);
     const [isTyping, setIsTyping] = useState(false);
     const [isTranscribing, setIsTranscribing] = useState(false);
+    const [sidebarOpen, setSidebarOpen] = useState(false);
+    const [currentChatId, setCurrentChatId] = useState<string | null>(null);
+
+    const { chatHistory, addChat, updateChat, deleteChat, getChat } = useChatHistory();
 
     const [supportedLanguages] = useState([
         // Nigerian Languages
@@ -56,9 +54,36 @@ const ChatHome: React.FC = () => {
     const audioChunksRef = useRef<Blob[]>([]);
     const synthRef = useRef<SpeechSynthesis | null>(null);
     const languageDropdownRef = useRef<HTMLDivElement>(null);
-    const {addContact, contacts} = useContacts();
+    const { addContact, contacts } = useContacts();
     const { mutate: signTransaction } = useSignTransaction();
     const client = useSuiClient();
+
+    // Initialize AI processor
+    useEffect(() => {
+        const initAI = async () => {
+            try {
+                aiProcessor = new AIProcessor(API_KEY);
+                await aiProcessor.initialize();
+                console.log("AI Processor initialized successfully!");
+            } catch (error) {
+                console.error("Failed to initialize AI processor:", error);
+            }
+        };
+
+        initAI();
+    }, []);
+
+    // Load chat from history when currentChatId changes
+    useEffect(() => {
+        if (currentChatId) {
+            const chat = getChat(currentChatId);
+            if (chat) {
+                setMessages(chat.messages);
+            }
+        } else {
+            setMessages([]);
+        }
+    }, [currentChatId]); // Removed getChat from dependencies to prevent infinite loop
 
     useEffect(() => {
         const handleClickOutside = (event: MouseEvent) => {
@@ -79,10 +104,18 @@ const ChatHome: React.FC = () => {
 
     const getLanguageApiCode = (langCode: string): string => {
         const lang = supportedLanguages.find(l => l.code === langCode);
-        return lang?.name || 'English';
+        return lang?.apiCode || 'en';
     };
 
     const transcribeAudio = async (audioBlob: Blob, language: string): Promise<string> => {
+        if (!aiProcessor) {
+            setMessages(prev => [...prev, {
+                sender: "bot",
+                text: "❌ AI processor not initialized. Please try again later."
+            }]);
+            throw new Error("AI processor not initialized");
+        }
+
         try {
             setIsTranscribing(true);
 
@@ -93,32 +126,25 @@ const ChatHome: React.FC = () => {
                 reader.onloadend = () => {
                     // Remove data URL prefix
                     const base64 = reader.result as string;
-                    resolve(base64.split(',')[1]);
+                    const base64Data = base64.split(',')[1];
+                    console.log("Base64 data length:", base64Data?.length);
+                    console.log("Base64 data sample:", base64Data?.substring(0, 100));
+                    resolve(base64Data);
                 };
             });
 
-            const response = await fetch('https://milobrain.onrender.com/api/v1/ai/transcribe', {
-                method: 'POST',
-                headers: {
-                    'Content-Type': 'application/json',
-                },
-                body: JSON.stringify({
-                    audio: audioBase64,
-                    mimeType: 'audio/wav',
-                    language: getLanguageApiCode(language)
-                }),
-            });
+            console.log("Transcribing audio with language:", language);
+            console.log("Audio base64 length:", audioBase64?.length);
 
-            if (!response.ok) {
-                throw new Error(`Transcription failed: ${response.statusText}`);
-            }
+            // Use the AI processor's transcribe function
+            const result = await aiProcessor.transcribe(audioBase64, 'audio/webm;codecs=opus', getLanguageApiCode(language));
 
-            const data = await response.json();
+            console.log("Transcription result:", result);
 
-            if (data.transcription) {
-                return data.transcription;
+            if (result.transcription) {
+                return result.transcription;
             } else {
-                throw new Error('No transcription text returned');
+                throw new Error('No transcription texts returned');
             }
         } catch (error) {
             console.error('Transcription error:', error);
@@ -130,6 +156,14 @@ const ChatHome: React.FC = () => {
 
     // Start recording audio
     const startRecording = async () => {
+        if (!aiProcessor) {
+            setMessages(prev => [...prev, {
+                sender: "bot",
+                text: "❌ AI processor not initialized. Please try again later."
+            }]);
+            return;
+        }
+
         try {
             if (!navigator.mediaDevices || !navigator.mediaDevices.getUserMedia) {
                 throw new Error('Audio recording not supported in this browser');
@@ -253,18 +287,18 @@ const ChatHome: React.FC = () => {
 
     const submitTransaction = async (bytes: string, signature: string) => {
         try {
-            setMessages((prev) => [
-                ...prev,
-                {
-                    sender: "bot",
-                    text: "⏳ Transaction submitted to network...",
-                    type: 'transaction',
-                    transactionData: {
-                        status: 'pending',
-                        timestamp: new Date()
-                    }
-                },
-            ]);
+            // Add pending transaction message immediately
+            const pendingMsg = {
+                sender: "bot",
+                text: "⏳ Transaction submitted to network...",
+                type: 'transaction',
+                transactionData: {
+                    status: 'pending',
+                    timestamp: new Date()
+                }
+            };
+            
+            setMessages(prev => [...prev, pendingMsg]);
 
             const response = await client.executeTransactionBlock({
                 transactionBlock: bytes,
@@ -276,8 +310,10 @@ const ChatHome: React.FC = () => {
             });
 
             const { digest, effects, events } = response;
-            setMessages((prev) => {
-                const newMessages = prev.filter(msg =>
+            
+            // Remove pending message and add success message
+            setMessages(prev => {
+                const newMessages = prev.filter(msg => 
                     !(msg.type === 'transaction' && msg.transactionData?.status === 'pending')
                 );
 
@@ -298,9 +334,15 @@ const ChatHome: React.FC = () => {
                 ];
             });
 
+            // Update chat history with new messages
+            if (currentChatId) {
+                updateChat(currentChatId, messages);
+            }
+
         } catch (error) {
-            setMessages((prev) => {
-                const newMessages = prev.filter(msg =>
+            // Remove pending message and add error message
+            setMessages(prev => {
+                const newMessages = prev.filter(msg => 
                     !(msg.type === 'transaction' && msg.transactionData?.status === 'pending')
                 );
 
@@ -320,7 +362,7 @@ const ChatHome: React.FC = () => {
         }
     };
 
-    const TransactionMessage = ({ message }: { message: Message }) => {
+    const TransactionMessage = ({ message }: { message: any }) => {
         if (!message.transactionData) return null;
 
         const { digest, status, gasUsed, eventsCount, timestamp } = message.transactionData;
@@ -329,19 +371,19 @@ const ChatHome: React.FC = () => {
         return (
             <div className={`max-w-[80%] px-4 py-3 rounded-xl text-sm border-l-4 ${
                 status === 'success'
-                    ? 'bg-[#6C55F5]/10 border-[#6C55F5] text-[#6C55F5]'
+                    ? 'bg-blue-50 border-blue-500 text-blue-700'
                     : status === 'failed'
-                        ? 'bg-red-50 border-red-400 text-red-800'
-                        : 'bg-blue-50 border-blue-400 text-blue-800'
+                        ? 'bg-red-50 border-red-500 text-red-700'
+                        : 'bg-gray-50 border-gray-500 text-gray-700'
             }`}>
                 <div className="flex items-start gap-3">
                     <div className="flex-shrink-0 mt-0.5">
                         {status === 'success' ? (
-                            <CheckCircle size={20} className="text-[#6C55F5]" />
+                            <CheckCircle size={20} className="text-blue-500" />
                         ) : status === 'failed' ? (
                             <XCircle size={20} className="text-red-500" />
                         ) : (
-                            <Clock size={20} className="text-blue-500" />
+                            <Clock size={20} className="text-gray-500" />
                         )}
                     </div>
 
@@ -354,7 +396,7 @@ const ChatHome: React.FC = () => {
                             <div className="space-y-1 text-xs">
                                 <div className="flex items-center gap-2">
                                     <span className="font-medium">Digest:</span>
-                                    <code className="bg-black/10 px-1.5 py-0.5 rounded text-xs font-mono">
+                                    <code className="bg-gray-100 px-1.5 py-0.5 rounded text-xs font-mono">
                                         {digest.slice(0, 12)}...{digest.slice(-8)}
                                     </code>
                                 </div>
@@ -403,12 +445,12 @@ const ChatHome: React.FC = () => {
         );
     };
 
-    const RegularMessage = ({ message }: { message: Message }) => {
+    const RegularMessage = ({ message }: { message: any }) => {
         return (
             <div className={`max-w-[80%] px-4 py-2 rounded-xl text-sm relative ${
                 message.sender === "user"
-                    ? "bg-[#6C55F5] text-white rounded-br-none"
-                    : "bg-gray-100 text-gray-800 rounded-bl-none"
+                    ? "bg-blue-600 text-white rounded-br-none"
+                    : "bg-gray-100 text-gray-800 rounded-bl-none border border-gray-200"
             }`}>
                 <p style={{ whiteSpace: "pre-wrap" }}>{message.text}</p>
                 {message.sender === "bot" && (
@@ -455,40 +497,88 @@ const ChatHome: React.FC = () => {
 
     const handleSendMessage = async (message: string) => {
         if (message.trim() === "") return;
+        
+        if (!aiProcessor) {
+            setMessages(prev => [...prev, {
+                sender: "bot",
+                text: "❌ AI processor not initialized. Please try again later."
+            }]);
+            return;
+        }
 
-        setMessages(prev => [...prev, { sender: "user", text: message }]);
+        // Add user message immediately
+        const userMessage = { sender: "user", text: message };
+        setMessages(prev => [...prev, userMessage]);
         setInput("");
         setIsTyping(true);
 
         try {
             setLoading(true);
-            const res = await fetch("https://milobrain.onrender.com/api/v1/ai/response", {
-                method: "POST",
-                headers: { "Content-Type": "application/json" },
-                body: JSON.stringify({ prompt: message, contacts: contacts })
-            });
+            
+            // Use the AI processor's processInput function
+            const data = await aiProcessor.processInput(message, contacts);
 
-            const data = await res.json();
-
-            if (data.action === "transfer") {
-                const botText = data.message || data.reply || data.error || "Sorry, something went wrong.";
-                setMessages(prev => [...prev, { sender: "bot", text: botText }]);
-                await executeTransfer(data);
+            // Type guard to check if it's a command result
+            if ('action' in data) {
+                // This is a CommandResult
+                if (data.action === "transfer") {
+                    const botText = data.message || data.reply || "Sorry, something went wrong.";
+                    setMessages(prev => [...prev, { sender: "bot", text: botText }]);
+                    await executeTransfer(data);
+                } else if (data.action === "error") {
+                    const botText = data.message || "Sorry, something went wrong.";
+                    setMessages(prev => [...prev, { sender: "bot", text: botText }]);
+                } else {
+                    const botText = data.reply || data.message || "Sorry, something went wrong.";
+                    setMessages(prev => [...prev, { sender: "bot", text: botText }]);
+                }
             } else {
-                const botText = data.message || data.reply || data.error || "Sorry, something went wrong.";
+                // This is a ConversationResult
+                const botText = data.message || "Sorry, something went wrong.";
                 setMessages(prev => [...prev, { sender: "bot", text: botText }]);
+            }
+
+            // Save to chat history
+            if (!currentChatId) {
+                // Create new chat
+                const newChat = addChat(message.substring(0, 30) + "...", [...messages, userMessage, { sender: "bot", text: data.message || "Sorry, something went wrong." }]);
+                setCurrentChatId(newChat.id);
+            } else {
+                // Update existing chat
+                updateChat(currentChatId, [...messages, userMessage, { sender: "bot", text: data.message || "Sorry, something went wrong." }]);
             }
 
         } catch (err) {
             const error = err as Error;
             setMessages(prev => [...prev, {
                 sender: "bot",
-                text: `Server error: ${error.message}. Please try again later.`
+                text: `AI processing error: ${error.message}. Please try again later.`
             }]);
         } finally {
             setLoading(false);
             setIsTyping(false);
         }
+    };
+
+    const startNewChat = () => {
+        setCurrentChatId(null);
+        setMessages([]);
+        setSteps("send");
+    };
+
+    const loadChat = (chat: ChatHistoryItem) => {
+        setCurrentChatId(chat.id);
+        setMessages(chat.messages);
+        setSidebarOpen(false);
+    };
+
+    const formatDate = (date: Date) => {
+        return new Date(date).toLocaleDateString('en-US', {
+            month: 'short',
+            day: 'numeric',
+            hour: '2-digit',
+            minute: '2-digit'
+        });
     };
 
     useEffect(() => {
@@ -498,287 +588,388 @@ const ChatHome: React.FC = () => {
     }, []);
 
     return (
-        <div className={`flex w-full flex-col items-center min-h-screen bg-[#ffffff] text-gray-600`}>
-            <div className="bg-white w-full font-sans text-milo-text relative">
-                <ChatHeader addContact={addContact} contacts={contacts} />
-            </div>
-
-            { steps === "swap" && <Swap /> }
-            { steps === "mint" && <Mint /> }
-            { steps !== "swap" && steps !== "mint" ?<><br /><br /><br /><br /><br /></> : ""}
-
-            {loading && <div className="text-sm text-gray-400 mb-2">Milo is thinking...</div>}
-
-            {/* Voice Recognition Tips */}
-            <div className="text-xs text-blue-600 mb-2 text-center max-w-md">
-                💡 Speak clearly in your preferred language. Gemini AI will transcribe your voice.
-            </div>
-
-            { steps !== "swap" && (
-                <>
-                    <div className="w-full max-w-[700px] px-4 mb-4 space-y-2">
-                        {messages.map((msg, index) => (
-                            <div
-                                key={index}
-                                className={`flex ${msg.sender === "user" ? "justify-end" : "justify-start"}`}
-                            >
-                                {msg.type === 'transaction' || msg.type === 'error' ? (
-                                    <TransactionMessage message={msg} />
-                                ) : (
-                                    <RegularMessage message={msg} />
-                                )}
-                            </div>
-                        ))}
-
-                        {isTyping && (
-                            <div className="flex justify-start">
-                                <div className="bg-gray-100 text-gray-800 rounded-xl rounded-bl-none px-4 py-2 max-w-[80%]">
-                                    <div className="flex items-center space-x-2">
-                                        <div className="flex space-x-1">
-                                            <div className="w-2 h-2 bg-gray-400 rounded-full animate-bounce"></div>
-                                            <div className="w-2 h-2 bg-gray-400 rounded-full animate-bounce" style={{animationDelay: '0.1s'}}></div>
-                                            <div className="w-2 h-2 bg-gray-400 rounded-full animate-bounce" style={{animationDelay: '0.2s'}}></div>
-                                        </div>
-                                        <span className="text-sm">Milo is typing...</span>
-                                    </div>
-                                </div>
-                            </div>
-                        )}
-
-                        {isListening && (
-                            <div className="flex justify-start">
-                                <div className="bg-gray-100 text-gray-800 rounded-xl rounded-bl-none px-4 py-2 max-w-[80%]">
-                                    <div className="flex items-center space-x-2">
-                                        <div className="flex space-x-1">
-                                            {[1, 2, 3].map((i) => (
-                                                <div
-                                                    key={i}
-                                                    className="w-1 bg-green-500 rounded-full animate-pulse"
-                                                    style={{
-                                                        height: `${Math.random() * 12 + 4}px`,
-                                                        animationDelay: `${i * 0.2}s`
-                                                    }}
-                                                />
-                                            ))}
-                                        </div>
-                                        <span className="text-sm">Recording... Speak now</span>
-                                    </div>
-                                </div>
-                            </div>
-                        )}
-
-                        {isTranscribing && (
-                            <div className="flex justify-start">
-                                <div className="bg-gray-100 text-gray-800 rounded-xl rounded-bl-none px-4 py-2 max-w-[80%]">
-                                    <div className="flex items-center space-x-2">
-                                        <Loader size={16} className="animate-spin text-blue-500" />
-                                        <span className="text-sm">Transcribing your voice...</span>
-                                    </div>
-                                </div>
-                            </div>
-                        )}
-                    </div>
-                    <div ref={chatEndRef} />
-                </>
-            )}
-
-            <div className={`hidden lg:flex flex-col items-center ${ messages.length == 0 ? "justify-center" : "justify-end"} flex-1 px-4 md:px-0`}>
-                {/* ... (keep your existing greeting logic) */}
-                { steps === "send" && (
-                    messages.length == 0 && (
-                        greet === "1" ? (
-                            <h1 className="lg:text-3xl md:text-4xl text-2xl md:text-4xl font-semibold mb-10">Hey there, i'm <b className="font-semibold text-[#6C55F5]">Milo</b></h1>
-                        ): (
-                            <h1 className="lg:text-3xl md:text-4xl text-2xl font-semibold mb-10">want to make a <b className="font-semibold text-[#6C55F5]">transaction ?</b></h1>
-                        )
-                    ))}
-
-                { steps === "mint" && (
-                    messages.length == 0 && (
-                        <h1 className="lg:text-3xl md:text-4xl text-2xl md:text-4xl font-semibold mb-10">Hey there, Want to mint an <b className="font-semibold text-[#6C55F5]">NFT?</b></h1>
-                    ))
-                }
-
-                <div className="bg-[#ffffff] gap-3 mb-4 rounded-2xl px-4 py-3 w-[90%] md:w-[700px] shadow-lg">
-                    <div className="flex items-center gap-3">
-                        <textarea
-                            value={input}
-                            onChange={(e) => setInput(e.target.value)}
-                            onKeyPress={handleKeyPress}
-                            placeholder={
-                                isTranscribing ? "Transcribing..." :
-                                    isListening ? "Recording... Speak now" :
-                                        "Make any transaction or speak your command..."
-                            }
-                            className="flex-1 bg-transparent outline-none text-sm md:text-base placeholder-gray-400 resize-none"
-                            rows={2}
-                            disabled={isListening || isTranscribing}
-                        />
-                        <button
-                            onClick={() => handleSendMessage(input)}
-                            className="flex items-center gap-1 bg-[#6C55F5] px-2 py-1 rounded-lg text-xs hover:bg-[#50515F] transition"
-                            disabled={isListening || isTranscribing || !input.trim()}
+        <div className="flex w-full min-h-screen bg-white font-sans text-gray-900">
+            {/* Microsoft-style subtle background */}
+            <div className="absolute inset-0 bg-gradient-to-br from-blue-50 via-white to-gray-50"></div>
+            <div className="absolute inset-0 bg-[radial-gradient(ellipse_at_top_right,_#2563eb_0%,_transparent_70%)] opacity-5"></div>
+            
+            {/* Sidebar */}
+            <div className={`${sidebarOpen ? 'translate-x-0' : '-translate-x-full'} lg:translate-x-0 fixed lg:static inset-y-0 left-0 z-50 w-64 bg-white border-r border-gray-200 transform transition-transform duration-300 ease-in-out flex flex-col`}>
+                <div className="p-4 border-b border-gray-200">
+                    <div className="flex items-center justify-between">
+                        <h2 className="text-lg font-semibold text-gray-900">Chat History</h2>
+                        <button 
+                            onClick={() => setSidebarOpen(false)}
+                            className="lg:hidden text-gray-500 hover:text-gray-700"
                         >
-                            <Send size={14} className={"text-white"} />
+                            <X size={20} />
                         </button>
                     </div>
-
-                    {/* Quick Action Buttons */}
-                    <div className="mt-2 flex flex-wrap gap-2">
-                        <button
-                            onClick={() => setInput('send 5 SUI to John')}
-                            className="px-2 py-1 text-xs bg-gray-100 hover:bg-gray-200 rounded transition-colors"
-                            disabled={isListening || isTranscribing}
-                        >
-                            send 5 SUI to John
-                        </button>
-                        <button
-                            onClick={() => setInput('swap 10 SUI to USDC')}
-                            className="px-2 py-1 text-xs bg-gray-100 hover:bg-gray-200 rounded transition-colors"
-                            disabled={isListening || isTranscribing}
-                        >
-                            swap 10 SUI to USDC
-                        </button>
-                        <button
-                            onClick={() => setInput('check my balance')}
-                            className="px-2 py-1 text-xs bg-gray-100 hover:bg-gray-200 rounded transition-colors"
-                            disabled={isListening || isTranscribing}
-                        >
-                            check my balance
-                        </button>
-                    </div>
-
-                    <div className="flex justify-between mt-4 items-center gap-2">
-                        <div className="flex items-center gap-2 text-xs">
-                            {/* ... (keep your existing buttons) */}
-                            <button onClick={() => setSteps("send")} className={`flex hover:text-white items-center border gap-1 px-2 py-1 rounded-lg text-xs ${steps === "send" ? "bg-[#6C55F5] text-white" : "bg-[#fffff]"} hover:bg-[#6C55F5] transition`}>
-                                <ArrowRightLeftIcon size={14} />
-                                Send
-                            </button>
-                            <button onClick={() => setSteps("swap")} className={`flex items-center border gap-1 px-2 py-1 rounded-lg text-xs ${ steps === "swap" ? "bg-[#6C55F5] text-white" : "bg-[#ffffff]" } hover:text-[#ffffff] hover:bg-[#6C55F5] transition`}>
-                                <ReplaceAll size={14} />
-                                Swap
-                            </button>
-                            <button onClick={() => setSteps("mint")} className={`flex items-center border gap-1 px-2 py-1 rounded-lg text-xs ${ steps === "mint" ? "bg-[#6C55F5] text-white" : "bg-[#ffffff]" } hover:text-[#ffffff] hover:bg-[#6C55F5] transition`}>
-                                <Gem size={14} />
-                                Mint
-                            </button>
+                    <button
+                        onClick={startNewChat}
+                        className="mt-4 w-full flex items-center gap-2 px-3 py-2 bg-blue-50 text-blue-700 rounded-lg hover:bg-blue-100 transition-colors"
+                    >
+                        <Plus size={16} />
+                        <span>New Chat</span>
+                    </button>
+                </div>
+                
+                <div className="flex-1 overflow-y-auto p-2">
+                    {chatHistory.length === 0 ? (
+                        <div className="p-4 text-center text-gray-500">
+                            <p>No chat history yet</p>
+                            <p className="text-sm mt-2">Start a conversation to see it here</p>
                         </div>
-                        <div className="flex items-center gap-2">
-                            {/* Language Dropdown Selector */}
-                            <div className="relative" ref={languageDropdownRef}>
-                                <button
-                                    onClick={() => setIsLanguageDropdownOpen(!isLanguageDropdownOpen)}
-                                    className="flex items-center gap-2 px-3 py-1 bg-white border border-gray-300 rounded-lg shadow-sm hover:bg-gray-50 transition-colors"
+                    ) : (
+                        <div className="space-y-1">
+                            {chatHistory.map((chat) => (
+                                <div 
+                                    key={chat.id}
+                                    className={`p-3 rounded-lg cursor-pointer transition-colors ${
+                                        currentChatId === chat.id 
+                                            ? 'bg-blue-50 border border-blue-200' 
+                                            : 'hover:bg-gray-50'
+                                    }`}
+                                    onClick={() => loadChat(chat)}
                                 >
-                                    <Globe size={16} className="text-gray-600" />
-                                    <span className="text-sm font-medium">
-                                        {getCurrentLanguage().flag} {getCurrentLanguage().name}
-                                    </span>
-                                    <ChevronDown
-                                        size={16}
-                                        className={`text-gray-600 transition-transform ${
-                                            isLanguageDropdownOpen ? 'rotate-180' : ''
-                                        }`}
-                                    />
-                                </button>
-
-                                {/* Dropdown Menu */}
-                                {isLanguageDropdownOpen && (
-                                    <div className="absolute top-full left-0 mt-1 w-64 bg-white border border-gray-200 rounded-lg shadow-lg z-50 max-h-80 overflow-y-auto">
-                                        <div className="p-2">
-                                            {/* Nigerian Languages Section */}
-                                            <div className="mb-2">
-                                                <div className="px-3 py-2 text-xs font-semibold text-gray-500 uppercase tracking-wide border-b border-gray-100">
-                                                    Nigerian Languages 🇳🇬
-                                                </div>
-                                                {supportedLanguages
-                                                    .filter(lang => lang.code.includes('NG'))
-                                                    .map((lang) => (
-                                                        <button
-                                                            key={lang.code}
-                                                            onClick={() => changeLanguage(lang.code)}
-                                                            className={`flex items-center gap-3 w-full px-3 py-2 text-left rounded-md text-sm transition-colors ${
-                                                                currentLanguage === lang.code
-                                                                    ? 'bg-[#6C55F5] text-white'
-                                                                    : 'hover:bg-gray-100 text-gray-700'
-                                                            }`}
-                                                        >
-                                                            <span className="text-base">{lang.flag}</span>
-                                                            <div className="flex-1">
-                                                                <div className="font-medium">{lang.name}</div>
-                                                                <div className="text-xs opacity-80">{lang.nativeName}</div>
-                                                            </div>
-                                                            {currentLanguage === lang.code && (
-                                                                <div className="w-2 h-2 bg-white rounded-full" />
-                                                            )}
-                                                        </button>
-                                                    ))
-                                                }
-                                            </div>
-
-                                            {/* International Languages Section */}
-                                            <div>
-                                                <div className="px-3 py-2 text-xs font-semibold text-gray-500 uppercase tracking-wide border-b border-gray-100">
-                                                    International Languages
-                                                </div>
-                                                {supportedLanguages
-                                                    .filter(lang => !lang.code.includes('NG'))
-                                                    .map((lang) => (
-                                                        <button
-                                                            key={lang.code}
-                                                            onClick={() => changeLanguage(lang.code)}
-                                                            className={`flex items-center gap-3 w-full px-3 py-2 text-left rounded-md text-sm transition-colors ${
-                                                                currentLanguage === lang.code
-                                                                    ? 'bg-[#6C55F5] text-white'
-                                                                    : 'hover:bg-gray-100 text-gray-700'
-                                                            }`}
-                                                        >
-                                                            <span className="text-base">{lang.flag}</span>
-                                                            <div className="flex-1">
-                                                                <div className="font-medium">{lang.name}</div>
-                                                                <div className="text-xs opacity-80">{lang.nativeName}</div>
-                                                            </div>
-                                                            {currentLanguage === lang.code && (
-                                                                <div className="w-2 h-2 bg-white rounded-full" />
-                                                            )}
-                                                        </button>
-                                                    ))
-                                                }
-                                            </div>
+                                    <div className="flex justify-between items-start">
+                                        <div className="flex-1 min-w-0">
+                                            <h3 className="font-medium text-gray-900 truncate text-sm">
+                                                {chat.title}
+                                            </h3>
+                                            <p className="text-xs text-gray-500 mt-1">
+                                                {formatDate(chat.timestamp)}
+                                            </p>
                                         </div>
+                                        <button 
+                                            onClick={(e) => {
+                                                e.stopPropagation();
+                                                deleteChat(chat.id);
+                                                if (currentChatId === chat.id) {
+                                                    startNewChat();
+                                                }
+                                            }}
+                                            className="text-gray-400 hover:text-red-500 ml-2"
+                                        >
+                                            <X size={16} />
+                                        </button>
                                     </div>
-                                )}
-                            </div>
-
-                            <button
-                                onClick={toggleListening}
-                                disabled={isTranscribing}
-                                className={`flex items-center gap-1 px-2 py-1 rounded-lg text-xs transition ${
-                                    isTranscribing
-                                        ? "bg-gray-300 text-gray-500 cursor-not-allowed"
-                                        : isListening
-                                            ? "bg-red-500 text-white hover:bg-red-600 animate-pulse"
-                                            : "bg-white border border-gray-300 text-gray-600 hover:bg-[#6C55F5] hover:text-white"
-                                }`}
-                            >
-                                {isTranscribing ? (
-                                    <Loader size={14} className="animate-spin" />
-                                ) : isListening ? (
-                                    <Square size={14} />
-                                ) : (
-                                    <Mic size={14} />
-                                )}
-                                {isTranscribing ? "Processing" : isListening ? "Stop" : "Voice"}
-                            </button>
+                                </div>
+                            ))}
                         </div>
-                    </div>
+                    )}
                 </div>
             </div>
 
-            {/* Mobile version */}
-            <div className="lg:hidden flex flex-col justify-end flex-1">
-                {/* Mobile content with similar updates */}
+            {/* Main Content */}
+            <div className="flex-1 flex flex-col min-w-0 relative">
+                {/* Mobile sidebar overlay */}
+                {sidebarOpen && (
+                    <div 
+                        className="lg:hidden fixed inset-0 bg-black bg-opacity-50 z-40"
+                        onClick={() => setSidebarOpen(false)}
+                    ></div>
+                )}
+
+                <div className="bg-white w-full font-sans text-milo-text relative">
+                    <div className="sticky top-0 z-10 bg-white border-b border-gray-200">
+                        <div className="flex items-center justify-between p-4">
+                            <button 
+                                onClick={() => setSidebarOpen(true)}
+                                className="lg:hidden text-gray-500 hover:text-gray-700"
+                            >
+                                <Menu size={24} />
+                            </button>
+                            <ChatHeader addContact={addContact} contacts={contacts} />
+                        </div>
+                    </div>
+                </div>
+
+                { steps === "swap" && <Swap /> }
+                { steps === "mint" && <Mint /> }
+                { steps !== "swap" && steps !== "mint" ?<><br /><br /><br /><br /><br /></> : ""}
+
+                {/* {loading && <div className="text-sm text-gray-500 mb-2">Milo is thinking...</div>} */}
+
+                {/* Voice Recognition Tips */}
+                <div className="text-xs text-blue-600 mb-2 text-center max-w-md mx-auto">
+                    💡 Speak clearly in your preferred language. Gemini AI will transcribe your voice.
+                </div>
+
+                { steps !== "swap" && steps !== "mint" && (
+                    <>
+                        <div className="w-full max-w-[700px] px-4 mb-4 space-y-2 mx-auto">
+                            {messages.map((msg, index) => (
+                                <div
+                                    key={index}
+                                    className={`flex ${msg.sender === "user" ? "justify-end" : "justify-start"}`}
+                                >
+                                    {msg.type === 'transaction' || msg.type === 'error' ? (
+                                        <TransactionMessage message={msg} />
+                                    ) : (
+                                        <RegularMessage message={msg} />
+                                    )}
+                                </div>
+                            ))}
+
+                            {isTyping && (
+                                <div className="flex justify-start">
+                                    <div className="bg-gray-100 text-gray-700 rounded-xl rounded-bl-none px-4 py-2 max-w-[80%] border border-gray-200">
+                                        <div className="flex items-center space-x-2">
+                                            <div className="flex space-x-1">
+                                                <div className="w-2 h-2 bg-gray-400 rounded-full animate-bounce"></div>
+                                                <div className="w-2 h-2 bg-gray-400 rounded-full animate-bounce" style={{animationDelay: '0.1s'}}></div>
+                                                <div className="w-2 h-2 bg-gray-400 rounded-full animate-bounce" style={{animationDelay: '0.2s'}}></div>
+                                            </div>
+                                            <span className="text-sm">Milo is typing...</span>
+                                        </div>
+                                    </div>
+                                </div>
+                            )}
+
+                            {isListening && (
+                                <div className="flex justify-start">
+                                    <div className="bg-gray-100 text-gray-700 rounded-xl rounded-bl-none px-4 py-2 max-w-[80%] border border-gray-200">
+                                        <div className="flex items-center space-x-2">
+                                            <div className="flex space-x-1">
+                                                {[1, 2, 3].map((i) => (
+                                                    <div
+                                                        key={i}
+                                                        className="w-1 bg-blue-600 rounded-full animate-pulse"
+                                                        style={{
+                                                            height: `${Math.random() * 12 + 4}px`,
+                                                            animationDelay: `${i * 0.2}s`
+                                                        }}
+                                                    />
+                                                ))}
+                                            </div>
+                                            <span className="text-sm">Recording... Speak now</span>
+                                        </div>
+                                    </div>
+                                </div>
+                            )}
+
+                            {isTranscribing && (
+                                <div className="flex justify-start">
+                                    <div className="bg-gray-100 text-gray-700 rounded-xl rounded-bl-none px-4 py-2 max-w-[80%] border border-gray-200">
+                                        <div className="flex items-center space-x-2">
+                                            <Loader size={16} className="animate-spin text-blue-600" />
+                                            <span className="text-sm">Transcribing your voice...</span>
+                                        </div>
+                                    </div>
+                                </div>
+                            )}
+                        </div>
+                        <div ref={chatEndRef} />
+                    </>
+                )}
+
+                <div className={`hidden lg:flex flex-col items-center ${ messages.length == 0 ? "justify-center" : "justify-end"} flex-1 px-4 md:px-0`}>
+                    {/* ... (keep your existing greeting logic) */}
+                    { steps === "send" && (
+                        messages.length == 0 && (
+                            greet === "1" ? (
+                                <h1 className="lg:text-4xl md:text-5xl text-3xl md:text-5xl font-bold mb-10 bg-clip-text text-transparent bg-gradient-to-r from-blue-600 to-blue-600">Hey there, i'm <b className="font-bold">Milo</b></h1>
+                            ): (
+                                <h1 className="lg:text-4xl md:text-5xl text-3xl font-bold mb-10 bg-clip-text text-transparent bg-gradient-to-r from-blue-600 to-blue-600">want to make a <b className="font-bold">transaction ?</b></h1>
+                            )
+                        ))}
+                    
+                    { steps === "b" && (
+                        messages.length == 0 && (
+                            <h1 className="lg:text-4xl md:text-5xl text-3xl md:text-5xl font-bold mb-10 bg-clip-text text-transparent bg-gradient-to-r from-blue-600 to-blue-600">Hey there, Want to mint an <b className="font-bold">NFT?</b></h1>
+                        ))
+                    }
+
+
+                    <div className="bg-white rounded-2xl shadow-lg border border-gray-200 gap-3 mb-4 px-4 py-3 w-[90%] md:w-[700px]">
+                        {steps !== "swap" && steps !== "mint" && (
+                        <>
+                            <div className="flex items-center gap-3">
+                                <textarea
+                                    value={input}
+                                    onChange={(e) => setInput(e.target.value)}
+                                    onKeyPress={handleKeyPress}
+                                    placeholder={
+                                        isTranscribing ? "Transcribing..." :
+                                            isListening ? "Recording... Speak now" :
+                                                "Make any transaction or speak your command..."
+                                    }
+                                    className="flex-1 outline-none text-sm md:text-base placeholder-gray-500 resize-none rounded-xl px-4 py-3"
+                                    rows={2}
+                                    disabled={isListening || isTranscribing}
+                                />
+                                <button
+                                    onClick={() => handleSendMessage(input)}
+                                    className="flex items-center gap-1 bg-blue-600 px-3 py-2 rounded-lg text-sm hover:bg-blue-700 transition font-medium shadow-lg text-white"
+                                    disabled={isListening || isTranscribing || !input.trim()}
+                                >
+                                    <Send size={16} />
+                                </button>
+                            </div>
+                            
+
+                            {/* Quick Action Buttons */}
+                            <div className="mt-3 flex flex-wrap gap-2">
+                                <button
+                                    onClick={() => setInput('send 5 SUI to John')}
+                                    className="px-3 py-1.5 text-xs bg-gray-50 hover:bg-gray-100 rounded-lg transition-colors border border-gray-200"
+                                    disabled={isListening || isTranscribing}
+                                >
+                                    send 5 SUI to John
+                                </button>
+                                <button
+                                    onClick={() => setInput('swap 10 SUI to USDC')}
+                                    className="px-3 py-1.5 text-xs bg-gray-50 hover:bg-gray-100 rounded-lg transition-colors border border-gray-200"
+                                    disabled={isListening || isTranscribing}
+                                >
+                                    swap 10 SUI to USDC
+                                </button>
+                                <button
+                                    onClick={() => setInput('check my balance')}
+                                    className="px-3 py-1.5 text-xs bg-gray-50 hover:bg-gray-100 rounded-lg transition-colors border border-gray-200"
+                                    disabled={isListening || isTranscribing}
+                                >
+                                    check my balance
+                                </button>
+                            </div>
+                        </>
+                        )}
+
+                        <div className="flex justify-between mt-4 items-center gap-2">
+                            <div className="flex items-center gap-2 text-xs">
+                                {/* ... (keep your existing buttons) */}
+                                <button onClick={() => setSteps("send")} className={`flex hover:text-white items-center border gap-1 px-3 py-1.5 rounded-lg text-sm ${steps === "send" ? "bg-blue-600 text-white" : "bg-gray-50 border-gray-200"} hover:bg-blue-600 transition`}>
+                                    <ArrowRightLeftIcon size={16} />
+                                    Send
+                                </button>
+                                <button onClick={() => setSteps("swap")} className={`flex items-center border gap-1 px-3 py-1.5 rounded-lg text-sm ${ steps === "swap" ? "bg-blue-600 text-white" : "bg-gray-50 border-gray-200" } hover:text-white hover:bg-blue-600 transition`}>
+                                    <ReplaceAll size={16} />
+                                    Swap
+                                </button>
+                                <button onClick={() => setSteps("mint")} className={`flex items-center border gap-1 px-3 py-1.5 rounded-lg text-sm ${ steps === "mint" ? "bg-blue-600 text-white" : "bg-gray-50 border-gray-200" } hover:text-white hover:bg-blue-600 transition`}>
+                                    <Gem size={16} />
+                                    Mint
+                                </button>
+                            </div>
+                            {steps !== "swap" && steps !== "mint" && (
+                            <div className="flex items-center gap-2">
+                                {/* Language Dropdown Selector */}
+                                <div className="relative" ref={languageDropdownRef}>
+                                    <button
+                                        onClick={() => setIsLanguageDropdownOpen(!isLanguageDropdownOpen)}
+                                        className="flex items-center gap-2 px-3 py-1.5 bg-gray-50 border border-gray-200 rounded-lg shadow-sm hover:bg-gray-100 transition-colors"
+                                    >
+                                        <Globe size={16} className="text-gray-600" />
+                                        <span className="text-sm font-medium">
+                                            {getCurrentLanguage().flag} {getCurrentLanguage().name}
+                                        </span>
+                                        <ChevronDown
+                                            size={16}
+                                            className={`text-gray-600 transition-transform ${
+                                                isLanguageDropdownOpen ? 'rotate-180' : ''
+                                            }`}
+                                        />
+                                    </button>
+
+                                    {/* Dropdown Menu */}
+                                    {isLanguageDropdownOpen && (
+                                        <div className="absolute top-full left-0 mt-1 w-64 bg-white border border-gray-200 rounded-lg shadow-lg z-50 max-h-80 overflow-y-auto">
+                                            <div className="p-2">
+                                                {/* Nigerian Languages Section */}
+                                                <div className="mb-2">
+                                                    <div className="px-3 py-2 text-xs font-semibold text-gray-500 uppercase tracking-wide border-b border-gray-200">
+                                                        Nigerian Languages 🇳🇬
+                                                    </div>
+                                                    {supportedLanguages
+                                                        .filter(lang => lang.code.includes('NG'))
+                                                        .map((lang) => (
+                                                            <button
+                                                                key={lang.code}
+                                                                onClick={() => changeLanguage(lang.code)}
+                                                                className={`flex items-center gap-3 w-full px-3 py-2 text-left rounded-md text-sm transition-colors ${
+                                                                    currentLanguage === lang.code
+                                                                        ? 'bg-blue-600 text-white'
+                                                                        : 'hover:bg-gray-100 text-gray-700'
+                                                                }`}
+                                                            >
+                                                                <span className="text-base">{lang.flag}</span>
+                                                                <div className="flex-1">
+                                                                    <div className="font-medium">{lang.name}</div>
+                                                                    <div className="text-xs opacity-80">{lang.nativeName}</div>
+                                                                </div>
+                                                                {currentLanguage === lang.code && (
+                                                                    <div className="w-2 h-2 bg-white rounded-full" />
+                                                                )}
+                                                            </button>
+                                                        ))
+                                                    }
+                                                </div>
+
+                                                {/* International Languages Section */}
+                                                <div>
+                                                    <div className="px-3 py-2 text-xs font-semibold text-gray-500 uppercase tracking-wide border-b border-gray-200">
+                                                        International Languages
+                                                    </div>
+                                                    {supportedLanguages
+                                                        .filter(lang => !lang.code.includes('NG'))
+                                                        .map((lang) => (
+                                                            <button
+                                                                key={lang.code}
+                                                                onClick={() => changeLanguage(lang.code)}
+                                                                className={`flex items-center gap-3 w-full px-3 py-2 text-left rounded-md text-sm transition-colors ${
+                                                                    currentLanguage === lang.code
+                                                                        ? 'bg-blue-600 text-white'
+                                                                        : 'hover:bg-gray-100 text-gray-700'
+                                                                }`}
+                                                            >
+                                                                <span className="text-base">{lang.flag}</span>
+                                                                <div className="flex-1">
+                                                                    <div className="font-medium">{lang.name}</div>
+                                                                    <div className="text-xs opacity-80">{lang.nativeName}</div>
+                                                                </div>
+                                                                {currentLanguage === lang.code && (
+                                                                    <div className="w-2 h-2 bg-white rounded-full" />
+                                                                )}
+                                                            </button>
+                                                        ))
+                                                    }
+                                                </div>
+                                            </div>
+                                        </div>
+                                    )}
+                                </div>
+
+                                <button
+                                    onClick={toggleListening}
+                                    disabled={isTranscribing}
+                                    className={`flex items-center gap-1 px-3 py-1.5 rounded-lg text-sm transition font-medium ${
+                                        isTranscribing
+                                            ? "bg-gray-200 text-gray-500 cursor-not-allowed"
+                                            : isListening
+                                                ? "bg-red-500 text-white hover:bg-red-600 animate-pulse"
+                                                : "bg-gray-50 border border-gray-200 text-gray-600 hover:bg-blue-600 hover:text-white"
+                                    }`}
+                                >
+                                    {isTranscribing ? (
+                                        <Loader size={16} className="animate-spin" />
+                                    ) : isListening ? (
+                                        <Square size={16} />
+                                    ) : (
+                                        <Mic size={16} />
+                                    )}
+                                    {isTranscribing ? "Processing" : isListening ? "Stop" : "Voice"}
+                                </button>
+                            </div>
+                            )}
+                        </div>
+                    </div>
+                </div>
+
+                {/* Mobile version */}
+                <div className="lg:hidden flex flex-col justify-end flex-1">
+                    {/* Mobile content with similar updates */}
+                </div>
             </div>
         </div>
     );
