@@ -27,6 +27,7 @@ const ChatHome: React.FC = () => {
     const [isTranscribing, setIsTranscribing] = useState(false);
     const [sidebarOpen, setSidebarOpen] = useState(false);
     const [currentChatId, setCurrentChatId] = useState<string | null>(null);
+    console.log(loading)
 
     const { chatHistory, addChat, updateChat, deleteChat, getChat } = useChatHistory();
 
