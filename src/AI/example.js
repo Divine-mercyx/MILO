@@ -14,8 +14,7 @@ const contacts = [
  */
 async function example() {
     // You would get this from an environment variable or user input in a real app
-    const API_KEY = "AIzaSyBbTzon1yyflIr6Kjg8KKS3dIAFYpGJmrk";
-    
+    const API_KEY = import.meta.env.VITE_AI_API_KEY;
     // Create and initialize the AI processor
     const aiProcessor = new AIProcessor(API_KEY);
     
