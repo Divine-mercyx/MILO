@@ -11,8 +11,8 @@ import { AIProcessor } from "../../AI/index.ts";
 import { useChatHistory } from "../../hooks/useChatHistory.ts";
 import type { ChatHistoryItem } from "../../types/types.ts";
 
-// Initialize AI processor with API key
-const API_KEY = "AIzaSyD8iuzRxSU01C44hC2euN5J7DiZ0Y2mvcs"; // In production, this should come from environment variables
+// Initialize AI processor with API key from environment variables
+const API_KEY = import.meta.env.VITE_AI_API_KEY;
 let aiProcessor: AIProcessor | null = null;
 
 const ChatHome: React.FC = () => {

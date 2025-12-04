@@ -4,7 +4,7 @@ import { useState } from "react";
 import { Send, Sparkles, Zap, Shield, Link } from "lucide-react";
 import { AIProcessor } from "../AI/index";
 
-const API_KEY = "AIzaSyBbTzon1yyflIr6Kjg8KKS3dIAFYpGJmrk";
+const API_KEY = import.meta.env.VITE_AI_API_KEY;
 let aiProcessor: AIProcessor | null = null;
 
 const Website: React.FC = () => {
