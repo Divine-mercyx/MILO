@@ -12,7 +12,7 @@ import { useChatHistory } from "../../hooks/useChatHistory.ts";
 import type { ChatHistoryItem } from "../../types/types.ts";
 
 // Initialize AI processor with API key
-const API_KEY = "AIzaSyBbTzon1yyflIr6Kjg8KKS3dIAFYpGJmrk"; // In production, this should come from environment variables
+const API_KEY = "AIzaSyD8iuzRxSU01C44hC2euN5J7DiZ0Y2mvcs"; // In production, this should come from environment variables
 let aiProcessor: AIProcessor | null = null;
 
 const ChatHome: React.FC = () => {
